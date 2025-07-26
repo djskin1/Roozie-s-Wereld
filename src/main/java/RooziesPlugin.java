@@ -16,11 +16,14 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class RooziesPlugin extends JavaPlugin implements Listener {
@@ -40,6 +43,11 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         createRolesConfig();
         createMenuConfig();
+
+        for (Player speler : Bukkit.getOnlinePlayers()){
+            zetSpelerInVerborgenTeam(speler);
+        }
+
         getLogger().info("RooziesPlugin is ingeschakeld!");
     }
 
@@ -90,6 +98,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player speler = event.getPlayer();
         UUID uuid = speler.getUniqueId();
+        zetSpelerInVerborgenTeam(event.getPlayer());
 
         // Als speler nog geen rol heeft of permissie heeft om te herkiezenn, open rolmenu
         if (!rolesConfig.contains(uuid.toString()) || speler.hasPermission("roozie.rol.herkiezen")) {
@@ -213,4 +222,22 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
 
         return true;
     }
+
+    //verborgen namen
+    public void zetSpelerInVerborgenTeam(Player speler) {
+        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team team = scoreboard.getTeam("verborgen");
+
+        if (team == null) {
+            team = scoreboard.registerNewTeam("verborgen");
+            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        }
+
+        if (!team.hasEntry(speler.getName())) {
+            team.addEntry(speler.getName());
+        }
+    }
+
+
 }
