@@ -1,6 +1,8 @@
+package com.roozie.roozieplugin;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
-public  class Rooziesplugin extends JavaPlugin {
+public class RooziesPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
