@@ -36,18 +36,8 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
-        setupConfig();
         loadRoles();
         getLogger().info("Roozies plugin has been enabled!");
-    }
-
-    private void setupConfig(){
-        rolesFiles = new File(getDataFolder(), "Roles.yml");
-        if (!rolesFiles.exists()){
-            rolesFiles.getParentFile().mkdirs();
-            saveResource("roles.yml", false);
-        }
-        rolesConfig = YamlConfiguration.loadConfiguration(rolesFiles);
     }
 
     private void saveRoles(){
@@ -72,6 +62,10 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
 
         if(!spelerRollen.containsKey(speler.getUniqueId())){
             Bukkit.getScheduler().runTaskLater(this, () -> openRoleMenu(speler), 40L);
+        }
+
+        if (rolesConfig == null) {
+            getLogger().warning("rolesConfig is nog null bij speler join! (dit zou niet moeten gebeuren)");
         }
     }
 
@@ -99,31 +93,44 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onMenuClick(InventoryClickEvent event){
-        if (event.getView().getTitle().equals("Kies je rol")){
-            event.setCancelled(true);
-            if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null){
-                Player speler = (Player) event.getWhoClicked();
-                String gekozenRol = event.getCurrentItem().getItemMeta().getDisplayName();
+    public void onMenuClick(InventoryClickEvent event) {
+        if (!event.getView().getTitle().equals("Kies je rol")) return;
 
-                if (gekozenRol.equals("Ultima Weerwolf") && !speler.hasPermission("roozie.rol.ultima")){
-                    speler.sendMessage("§cJe hebt geen permissie voor deze rol.");
-                    return;
-                }
-                spelerRollen.put(speler.getUniqueId(), gekozenRol);
-                speler.sendMessage("§aJe hebt gekozen voor de rol: §e" + gekozenRol);
-                speler.closeInventory();
-            }
+        event.setCancelled(true);
+
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null || clickedItem.getType() == Material.AIR || !clickedItem.hasItemMeta()) return;
+
+        Player speler = (Player) event.getWhoClicked();
+        String gekozenRol = clickedItem.getItemMeta().getDisplayName();
+
+        if (gekozenRol.equals("Ultima Weerwolf") && !speler.hasPermission("roozie.rol.ultima")) {
+            speler.sendMessage("§cJe hebt geen permissie voor deze rol.");
+            return;
         }
+
+        spelerRollen.put(speler.getUniqueId(), gekozenRol);
+        speler.sendMessage("§aJe hebt gekozen voor de rol: §e" + gekozenRol);
+        speler.closeInventory();
     }
 
     public void loadRoles() {
-        File rolesFile = new File(getDataFolder(), "roles.yml");
-        if (!rolesFile.exists()) {
-            saveResource("roles.yml", false);
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
         }
-        rolesConfig = YamlConfiguration.loadConfiguration(rolesFile);
+
+        rolesFiles = new File(getDataFolder(), "roles.yml");  // let op: gebruik de veldnaam
+        if (!rolesFiles.exists()){
+            try {
+                rolesFiles.createNewFile();
+            } catch (IOException e){
+                getLogger().warning("Kan roles.yml niet aanmaken!");
+                e.printStackTrace();
+            }
+        }
+        rolesConfig = YamlConfiguration.loadConfiguration(rolesFiles);
     }
+
 
 
     @Override
