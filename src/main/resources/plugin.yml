@@ -1,0 +1,11 @@
+name: RooziesPlugin
+version: 0.1-1.21.5
+main: com.roozies
+description: A custom plugin for roleplay
+author: Djskinproductions
+commands:
+  rooziesplugin:
+    description: Rooziesplugin Commands
+    permission: roozie.admin
+    usage: /rw help
+  api-version: 1.21.5

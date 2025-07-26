@@ -1,5 +1,3 @@
-package com.roozies;
-
 import org.bukkit.plugin.java.JavaPlugin;
 
 public  class Rooziesplugin extends JavaPlugin {
