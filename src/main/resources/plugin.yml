@@ -9,4 +9,4 @@ commands:
     description: Rooziesplugin Commands
     permission: roozie.help
     usage: /rw help
-  api-version: 1.21
+api-version: 1.21
