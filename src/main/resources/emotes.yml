@@ -1,0 +1,178 @@
+emotes:
+  wave:
+    message: "Je zwaait vrolijk!"
+    sound: ENTITY_PLAYER_LEVELUP
+    actions:
+      - SWING_ARM
+    duration: 3
+
+  cry:
+    message: "Je huilt verdrietig."
+    sound: ENTITY_PLAYER_HURT
+    actions:
+      - LOWER_HEAD
+    duration: 4
+
+  sit:
+    message: "Je gaat zitten."
+    actions:
+      - SIT
+    duration: 0
+
+  blush:
+    message: "Je bloost verlegen."
+    actions:
+      - BLUSH
+    duration: 5
+
+  love:
+    message: "Je kijkt verliefd met hartjes ogen."
+    sound: ENTITY_PLAYER_LEVELUP
+    actions:
+      - LOVE_EYES
+    duration: 5
+
+  pain:
+    message: "Je voelt pijn!"
+    sound: ENTITY_PLAYER_HURT
+    actions:
+      - SWING_ARM
+      - LOWER_HEAD
+    duration: 4
+
+  angry:
+    message: "Je bent boos!"
+    sound: ENTITY_PLAYER_ANGRY
+    actions:
+      - SWING_ARM
+      - LOWER_HEAD
+    duration: 4
+
+  shocked:
+    message: "Je bent geschrokken!"
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+    actions:
+      - JUMP_BACK
+    duration: 3
+
+  ashamed:
+    message: "Je voelt je beschaamd."
+    actions:
+      - LOWER_HEAD
+      - BLUSH
+    duration: 5
+
+  laugh:
+    message: "Je lacht hard."
+    sound: ENTITY_PLAYER_LEVELUP
+    actions:
+      - LAUGH
+    duration: 4
+
+  lie_down:
+    message: "Je ligt nu neer."
+    actions:
+      - LIE_DOWN
+    duration: 0
+
+  scared:
+    message: "Je bent bang!"
+    sound: ENTITY_ZOMBIE_VILLAGER_CONVERTED
+    actions:
+      - SHAKE
+    duration: 5
+
+  jealous:
+    message: "Je bent jaloers."
+    actions:
+      - LOWER_HEAD
+      - BLUSH
+    duration: 4
+
+  shy:
+    message: "Je bent verlegen."
+    actions:
+      - BLUSH
+      - LOWER_HEAD
+    duration: 5
+
+  surprised:
+    message: "Je bent verbaasd!"
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+    actions:
+      - JUMP
+    duration: 3
+
+  proud:
+    message: "Je bent trots!"
+    actions:
+      - STAND_TALL
+    duration: 4
+
+  serious:
+    message: "Je bent serieus."
+    actions:
+      - STILL
+    duration: 0
+
+  calm:
+    message: "Je bent rustig."
+    actions:
+      - BREATH_DEEP
+    duration: 5
+
+  dream:
+    message: "Je droomt weg..."
+    actions:
+      - CLOSE_EYES
+    duration: 5
+
+  sleep:
+    message: "Je gaat slapen."
+    actions:
+      - LIE_DOWN
+      - CLOSE_EYES
+    duration: 0
+
+  kneel:
+    message: "Je knielt neer."
+    actions:
+      - KNEEL
+    duration: 0
+
+  hug:
+    message: "Je omhelst iemand."
+    actions:
+      - HUG
+    duration: 5
+
+  push:
+    message: "Je duwt iemand."
+    actions:
+      - PUSH
+    duration: 2
+
+  grab:
+    message: "Je pakt iets vast."
+    actions:
+      - GRAB
+    duration: 3
+
+  fall:
+    message: "Je valt om."
+    actions:
+      - FALL
+    duration: 3
+
+kiss:
+  message: "Je geeft een kus."
+  sound: ENTITY_PLAYER_LEVELUP
+  actions:
+    - KISS
+  duration: 4
+
+  hold_hand:
+    message: "Je houdt iemands hand vast."
+    actions:
+      - HOLD_HAND
+    duration: 5

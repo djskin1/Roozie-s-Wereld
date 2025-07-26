@@ -21,10 +21,7 @@ import org.bukkit.scoreboard.Team;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 public class RooziesPlugin extends JavaPlugin implements Listener {
 
@@ -33,6 +30,9 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
 
     private File menuConfigFile;
     private FileConfiguration menuConfig;
+
+    private File emoteFile;
+    private FileConfiguration emoteConfig;
 
     // Houdt gekozen rollen tijdelijk bij tijdens runtime
     private final Map<UUID, String> spelerRollen = new HashMap<>();
@@ -43,6 +43,9 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         createRolesConfig();
         createMenuConfig();
+        loadEmoteConfig();
+        saveDefaultEmoteConfig();
+
 
         for (Player speler : Bukkit.getOnlinePlayers()){
             zetSpelerInVerborgenTeam(speler);
@@ -201,6 +204,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         }
 
         Player speler = (Player) sender;
+        String cmdName = command.getName().toLowerCase();
 
         if (!speler.hasPermission("roozie.rol.reset")) {
             speler.sendMessage("§cJe hebt geen permissie om je rol te resetten.");
@@ -220,7 +224,35 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         speler.sendMessage("§aJe rol is gereset! Kies een nieuwe rol.");
         openRoleMenu(speler);
 
-        return true;
+        //emotes
+        if (cmdName.equals("wave") || cmdName.equals("cry") || cmdName.equals("sit") || cmdName.equals("blush")
+                || cmdName.equals("kiss") || cmdName.equals("holdhand")) {
+
+            if (cmdName.equals("kiss") || cmdName.equals("holdhand")) {
+                // Deze emotes vereisen 1 argument: target speler
+                if (args.length != 1) {
+                    speler.sendMessage("Gebruik: /" + cmdName + " <speler>");
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[0]);
+                if (target == null || !target.isOnline()) {
+                    speler.sendMessage("Speler niet gevonden of niet online.");
+                    return true;
+                }
+
+                speler.sendMessage("Je voert emote '" + cmdName + "' uit met " + target.getName() + "!");
+                target.sendMessage(speler.getName() + " voert emote '" + cmdName + "' met jou uit!");
+
+                performEmote(speler, cmdName);
+                performEmote(target, cmdName);
+            } else {
+                // Emotes zonder target
+                performEmote(speler, cmdName);
+            }
+            return true;
+        }
+
+        return false;
     }
 
     //verborgen namen
@@ -239,5 +271,97 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    //emotes
+    private void saveDefaultEmoteConfig() {
+         emoteFile = new File(getDataFolder(), "emotes.yml");
+        if (!emoteFile.exists()) {
+            saveResource("emotes.yml", false);
+        }
+    }
 
+    private void loadEmoteConfig() {
+        emoteFile = new File(getDataFolder(), "emotes.yml");
+        emoteConfig = YamlConfiguration.loadConfiguration(emoteFile);
+    }
+
+    public void performEmote(Player speler, String emoteName){
+        if (!emoteConfig.contains("emotes." + emoteName)) {
+            speler.sendMessage("Deze emote bestaat niet.");
+            return;
+        }
+
+        String message = emoteConfig.getString("emotes." + emoteName + ".message", "");
+        if (!message.isEmpty()) {
+            speler.sendMessage(message.replace("{player}", speler.getName()));
+        }
+
+        List<String> actions = emoteConfig.getStringList("emotes." + emoteName + ".actions");
+        for (String action : actions) {
+            performAction(speler, action);
+        }
+    }
+
+    public void performAction(Player speler, String action){
+        switch (action.toLowerCase()) {
+            case "swingarm":
+                speler.swingMainHand();
+                break;
+
+            case "sit":
+                // Simuleer zitten door speler op een stoel te zetten (kan uitgebreid met armorstand)
+                // Voor nu: stuur message
+                speler.sendMessage("Je gaat zitten.");
+                break;
+
+            case "wave":
+                speler.swingMainHand();
+                break;
+
+            case "cry":
+                speler.sendMessage("Je huilt stilletjes... 😢");
+                break;
+
+            case "blush":
+                speler.sendMessage("Je begint te blozen. 😊");
+                break;
+
+            case "kiss":
+                speler.swingMainHand();
+                break;
+
+            case "hold_hand":
+                speler.sendMessage("Je houdt iemands hand vast. 🤝");
+                break;
+
+            case "pain":
+                speler.sendMessage("Je voelt pijn... 😣");
+                break;
+
+            case "angry":
+                speler.sendMessage("Je bent boos! 😠");
+                break;
+
+            case "shocked":
+                speler.sendMessage("Je bent geschrokken! 😲");
+                break;
+
+            case "shy":
+                speler.sendMessage("Je voelt je verlegen. 😳");
+                break;
+
+            case "laugh":
+                speler.sendMessage("Je lacht hardop! 😄");
+                break;
+
+            case "sleep":
+                speler.sendMessage("Je valt in slaap... 😴");
+                break;
+
+            // Voeg meer acties hier toe...
+
+            default:
+                speler.sendMessage("Onbekende actie: " + action);
+                break;
+        }
+    }
 }
