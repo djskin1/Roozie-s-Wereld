@@ -8,5 +8,17 @@ commands:
   help:
     description: Rooziesplugin Commands
     permission: roozie.help
-    usage: /rw help
+    usage: /help
+  resetrol:
+    description: Reset jou rol en kies opnieuw
+    permission: roozie.rol.herkiezen
+    usage: /resetrol
 api-version: 1.21
+
+permissions:
+  roozie.rol.ultima:
+    description: Mag Ultima Weerwolf kiezen
+    default: op
+  roozie.rol.herkiezen:
+    description: Mag opnieuw een rol kiezen
+    default: false
