@@ -1,96 +1,151 @@
 package com.roozie.roozieplugin;
 
-//std imports
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
-
-import java.security.PrivateKey;
-import java.util.*;
-import java.io.File;
-import java.io.IOException;
-
-//imports voor plugin
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Player;
-import org.bukkit.event.*;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.yaml.snakeyaml.Yaml;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class RooziesPlugin extends JavaPlugin implements Listener {
 
-    private File rolesFiles;
+    private File rolesFile;
     private FileConfiguration rolesConfig;
+
+    private File menuConfigFile;
+    private FileConfiguration menuConfig;
+
+    // Houdt gekozen rollen tijdelijk bij tijdens runtime
     private final Map<UUID, String> spelerRollen = new HashMap<>();
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
-        loadRoles();
-        getLogger().info("Roozies plugin has been enabled!");
+        createRolesConfig();
+        createMenuConfig();
+        getLogger().info("RooziesPlugin is ingeschakeld!");
     }
 
-    private void saveRoles(){
+    @Override
+    public void onDisable() {
+        getLogger().info("RooziesPlugin is uitgeschakeld!");
+    }
+
+    // --- Configuratie handling ---
+
+    private void createRolesConfig() {
+        rolesFile = new File(getDataFolder(), "roles.yml");
+        if (!rolesFile.exists()) {
+            try {
+                getDataFolder().mkdirs();
+                rolesFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().severe("Kon roles.yml niet aanmaken!");
+                e.printStackTrace();
+            }
+        }
+        rolesConfig = YamlConfiguration.loadConfiguration(rolesFile);
+    }
+
+    private void saveRolesConfig() {
         try {
-            rolesConfig.save(rolesFiles);
-        } catch (IOException e){
+            rolesConfig.save(rolesFile);
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private void createMenuConfig() {
+        menuConfigFile = new File(getDataFolder(), "menu_config.yml");
+        if (!menuConfigFile.exists()) {
+            saveResource("menu_config.yml", false); // kopieert van jar naar datafolder
+        }
+        menuConfig = YamlConfiguration.loadConfiguration(menuConfigFile);
+    }
+
+    public FileConfiguration getMenuConfig() {
+        return menuConfig;
+    }
+
+    // --- Speler join event: check rol en open menu indien nodig ---
+
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event){
+    public void onPlayerJoin(PlayerJoinEvent event) {
         Player speler = event.getPlayer();
         UUID uuid = speler.getUniqueId();
 
-        if(!rolesConfig.contains(uuid.toString()) || speler.hasPermission("roozie.rol.herkiezen")){
-            Bukkit.getScheduler().runTaskLater(this, () -> openRoleMenu(speler), 40L);
-        } else {
-            String rol = rolesConfig.getString(uuid.toString());
-            speler.sendMessage("§aWelkom terug, je rol is: §e" + rol);
+        // Als speler nog geen rol heeft of permissie heeft om te herkiezenn, open rolmenu
+        if (!rolesConfig.contains(uuid.toString()) || speler.hasPermission("roozie.rol.herkiezen")) {
+            Bukkit.getScheduler().runTaskLater(this, () -> openRoleMenu(speler), 20L);
+            return;
         }
 
-        if(!spelerRollen.containsKey(speler.getUniqueId())){
-            Bukkit.getScheduler().runTaskLater(this, () -> openRoleMenu(speler), 40L);
-        }
-
-        if (rolesConfig == null) {
-            getLogger().warning("rolesConfig is nog null bij speler join! (dit zou niet moeten gebeuren)");
-        }
+        String rol = rolesConfig.getString(uuid.toString());
+        speler.sendMessage("§aWelkom terug! Je rol is: §e" + rol);
     }
 
+    // --- Menu openen met rollen uit menu_config.yml ---
+
     public void openRoleMenu(Player speler) {
+        ConfigurationSection rollenSectie = getMenuConfig().getConfigurationSection("rollen");
+        if (rollenSectie == null) {
+            speler.sendMessage("§cEr zijn geen rollen geconfigureerd! Neem contact op met een admin.");
+            return;
+        }
+
         Inventory menu = Bukkit.createInventory(null, 9, "Kies je rol");
 
-        menu.setItem(0, createMenuItem(Material.WOLF_SPAWN_EGG, "Weerwolf"));
-        menu.setItem(1, createMenuItem(Material.FEATHER, "Engel"));
-        menu.setItem(2, createMenuItem(Material.POTION, "Heks"));
-        menu.setItem(3, createMenuItem(Material.BREAD, "Mens"));
+        int slot = 0;
+        for (String rolNaam : rollenSectie.getKeys(false)) {
+            ConfigurationSection rolSectie = rollenSectie.getConfigurationSection(rolNaam);
+            if (rolSectie == null) continue;
 
-        if (speler.hasPermission("roozie.rol.Ultima")) {
-            menu.setItem(4, createMenuItem(Material.NETHER_STAR, "Ultima Weerwolf"));
+            Material materiaal = Material.getMaterial(rolSectie.getString("materiaal", "STONE"));
+            String lore = rolSectie.getString("lore", "");
+            String permissie = rolSectie.getString("permissie", "");
+
+            if (materiaal == null) materiaal = Material.STONE;
+
+            // Alleen tonen als speler permissie heeft voor deze rol
+            if (permissie.isEmpty() || speler.hasPermission(permissie)) {
+                menu.setItem(slot++, createMenuItem(materiaal, rolNaam, lore));
+            }
         }
 
         speler.openInventory(menu);
     }
 
-    private ItemStack createMenuItem (Material materiaal, String naam){
+    private ItemStack createMenuItem(Material materiaal, String naam, String lore) {
         ItemStack item = new ItemStack(materiaal);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(naam);
-        item.setItemMeta(meta);
+        if (meta != null) {
+            meta.setDisplayName(naam);
+            if (!lore.isEmpty()) {
+                meta.setLore(java.util.Collections.singletonList(lore));
+            }
+            item.setItemMeta(meta);
+        }
         return item;
     }
+
+    // --- Klik event in rol menu ---
 
     @EventHandler
     public void onMenuClick(InventoryClickEvent event) {
@@ -104,50 +159,35 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         Player speler = (Player) event.getWhoClicked();
         String gekozenRol = clickedItem.getItemMeta().getDisplayName();
 
-        if (gekozenRol.equals("Ultima Weerwolf") && !speler.hasPermission("roozie.rol.ultima")) {
+        ConfigurationSection rolSectie = getMenuConfig().getConfigurationSection("rollen." + gekozenRol);
+        if (rolSectie == null) {
+            speler.sendMessage("§cDeze rol bestaat niet (meer).");
+            return;
+        }
+
+        String permissie = rolSectie.getString("permissie", "");
+        if (!permissie.isEmpty() && !speler.hasPermission(permissie)) {
             speler.sendMessage("§cJe hebt geen permissie voor deze rol.");
             return;
         }
 
-        spelerRollen.put(speler.getUniqueId(), gekozenRol);
+        // Sla rol op in roles.yml
+        UUID uuid = speler.getUniqueId();
+        rolesConfig.set(uuid.toString(), gekozenRol);
+        saveRolesConfig();
+
+        spelerRollen.put(uuid, gekozenRol);
+
         speler.sendMessage("§aJe hebt gekozen voor de rol: §e" + gekozenRol);
         speler.closeInventory();
     }
 
-    public void loadRoles() {
-        if (!getDataFolder().exists()) {
-            getDataFolder().mkdirs();
-        }
-
-        rolesFiles = new File(getDataFolder(), "roles.yml");  // let op: gebruik de veldnaam
-        if (!rolesFiles.exists()){
-            try {
-                rolesFiles.createNewFile();
-            } catch (IOException e){
-                getLogger().warning("Kan roles.yml niet aanmaken!");
-                e.printStackTrace();
-            }
-        }
-        rolesConfig = YamlConfiguration.loadConfiguration(rolesFiles);
-    }
-
-
+    // --- Command om rol te resetten ---
 
     @Override
-    public void onDisable() {
-        // Plugin shutdown logic
-        getLogger().info("Roozies plugin has been disabled!");
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
-        if (command.getName().equalsIgnoreCase("help")){
-            sender.sendMessage("Help menu");
-            return true;
-        }
-
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Alleen spelers kunnen dit commando gebruiken.");
+            sender.sendMessage("§cDit commando kan alleen door spelers worden gebruikt.");
             return true;
         }
 
@@ -166,9 +206,9 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         }
 
         rolesConfig.set(uuid.toString(), null);
-        saveRoles();
+        saveRolesConfig();
 
-        speler.sendMessage("§aJe rol is gereset. Kies opnieuw...");
+        speler.sendMessage("§aJe rol is gereset! Kies een nieuwe rol.");
         openRoleMenu(speler);
 
         return true;

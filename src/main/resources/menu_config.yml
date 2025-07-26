@@ -1,0 +1,21 @@
+rollen:
+  Weerwolf:
+    materiaal: WOLF_SPAWN_EGG
+    lore: "Een gevaarlijke nachtelijke jager"
+    permissie: rol.weerwolf
+  Engel:
+    materiaal: FEATHER
+    lore: "Beschermt onschuldigen tegen kwaad"
+    permissie: rol.engel
+  Heks:
+    materiaal: POTION
+    lore: "Heeft mysterieuze krachten"
+    permissie: rol.heks
+  Mens:
+    materiaal: BREAD
+    lore: "Gewoon een simpele dorpsbewoner"
+    permissie: rol.mens
+  Ultima Weerwolf:
+    materiaal: NETHER_STAR
+    lore: "De ultieme dreiging"
+    permissie: rol.ultima
