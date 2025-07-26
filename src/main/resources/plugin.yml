@@ -18,7 +18,7 @@ api-version: 1.21
 permissions:
   roozie.rol.ultima:
     description: Mag Ultima Weerwolf kiezen
-    default: op
+    default: opr
   roozie.rol.herkiezen:
     description: Mag opnieuw een rol kiezen
     default: false

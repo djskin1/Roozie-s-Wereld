@@ -37,6 +37,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
         setupConfig();
+        loadRoles();
         getLogger().info("Roozies plugin has been enabled!");
     }
 
@@ -114,6 +115,14 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
                 speler.closeInventory();
             }
         }
+    }
+
+    public void loadRoles() {
+        File rolesFile = new File(getDataFolder(), "roles.yml");
+        if (!rolesFile.exists()) {
+            saveResource("roles.yml", false);
+        }
+        rolesConfig = YamlConfiguration.loadConfiguration(rolesFile);
     }
 
 
