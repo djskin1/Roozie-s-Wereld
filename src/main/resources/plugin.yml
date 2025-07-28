@@ -6,7 +6,7 @@ author: Djskinproductions
 
 commands:
   help:
-    description: Rooziesplugin Commands
+    description: help
     usage: /help
   resetrol:
     description: Reset jou rol en kies opnieuw
@@ -16,7 +16,7 @@ api-version: 1.21
 permissions:
   roozie.help:
     description: Roozie's help
-    default: user
+    default: true
   roozie.rol.ultima:
     description: Mag Ultima Weerwolf kiezen
     default: op
