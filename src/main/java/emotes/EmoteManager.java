@@ -1,4 +1,4 @@
-package RooziesPlugin.emotes;
+package com.roozie.roozieplugin.emotes;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;

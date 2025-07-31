@@ -1,6 +1,8 @@
+package RooziesPlugin;
+
 import org.bukkit.Bukkit;
-import Roles.RoleManager;
-import emotes.EmoteManager;
+import com.roozie.roozieplugin.roles.RoleManager;
+import com.roozie.roozieplugin.emotes.EmoteManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;

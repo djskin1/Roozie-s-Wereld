@@ -3,6 +3,7 @@ version: 0.1-1.21.5
 main: com.roozie.roozieplugin.RooziesPlugin
 description: A custom plugin for roleplay
 author: Djskinproductions
+api-version: 1.21
 
 commands:
   help:
@@ -11,7 +12,11 @@ commands:
   resetrol:
     description: Reset jou rol en kies opnieuw
     usage: /rolreset
-api-version: 1.21
+  wave:
+  cry:
+  sit:
+  kiss:
+  holdhand:
 
 permissions:
   roozie.help:
