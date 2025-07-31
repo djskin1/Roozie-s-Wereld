@@ -17,7 +17,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener{
     private EmoteManager emoteManager;
 
     @Override
-    public void onEnable(){
+    public void onEnable() {
         saveDefaultConfig();
         saveResource("menu_config.yml", false);
         saveResource("emotes.yml", false);
@@ -29,7 +29,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener{
 
         getLogger().info("RooziesPlugin ingeschakeld!");
 
-        for (Player speler: Bukkit.getOnlinePlayers()){
+        for (Player speler : Bukkit.getOnlinePlayers()) {
             roleManager.zetSpelerInVerborgenTeam(speler);
         }
     }
