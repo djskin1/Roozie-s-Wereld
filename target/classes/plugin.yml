@@ -3,26 +3,86 @@ version: 0.1-1.21.5
 main: com.roozie.roozieplugin.RooziesPlugin
 description: A custom plugin for roleplay
 author: Djskinproductions
+api-version: 1.21
 
 commands:
   help:
-    description: Rooziesplugin Commands
+    description: Toon help informatie
     usage: /help
   resetrol:
-    description: Reset jou rol en kies opnieuw
-    usage: /rolreset
-api-version: 1.21
+    description: Reset jouw rol en kies opnieuw
+    usage: /resetrol
+
+  # Emote commands
+  emote:
+    description: Gebruik een aangepaste emote
+    usage: /emote <naam>
+
+  wave:
+    description: Doe de emote 'wave'
+  cry:
+    description: Doe de emote 'cry'
+  sit:
+    description: Doe de emote 'sit'
+  kiss:
+    description: Doe de emote 'kiss'
+  holdhand:
+    description: Doe de emote 'holdhand'
+  blush:
+    description: Doe de emote 'blush'
+  love:
+    description: Doe de emote 'love'
+  pain:
+    description: Doe de emote 'pain'
+  angry:
+    description: Doe de emote 'angry'
+  shocked:
+    description: Doe de emote 'shocked'
+  ashamed:
+    description: Doe de emote 'ashamed'
+  laugh:
+    description: Doe de emote 'laugh'
+  lie_down:
+    description: Doe de emote 'lie_down'
+  scared:
+    description: Doe de emote 'scared'
+  jealous:
+    description: Doe de emote 'jealous'
+  shy:
+    description: Doe de emote 'shy'
+  surprised:
+    description: Doe de emote 'surprised'
+  proud:
+    description: Doe de emote 'proud'
+  serious:
+    description: Doe de emote 'serious'
+  calm:
+    description: Doe de emote 'calm'
+  dream:
+    description: Doe de emote 'dream'
+  sleep:
+    description: Doe de emote 'sleep'
+  kneel:
+    description: Doe de emote 'kneel'
+  hug:
+    description: Doe de emote 'hug'
+  push:
+    description: Doe de emote 'push'
+  grab:
+    description: Doe de emote 'grab'
+  fall:
+    description: Doe de emote 'fall'
 
 permissions:
   roozie.help:
-    description: Roozie's help
-    default: user
+    description: Toegang tot /help
+    default: true
   roozie.rol.ultima:
-    description: Mag Ultima Weerwolf kiezen
+    description: Mag de Ultima Weerwolf rol kiezen
     default: op
   roozie.rol.herkiezen:
     description: Mag opnieuw een rol kiezen
     default: op
   roozie.rol.reset:
-    description: Reset je rol
+    description: Mag zijn/haar rol resetten
     default: op
