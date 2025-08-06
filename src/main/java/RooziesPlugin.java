@@ -1,8 +1,8 @@
-package RooziesPlugin;
+package com.roozie.roozieplugin;
 
-import org.bukkit.Bukkit;
 import com.roozie.roozieplugin.roles.RoleManager;
 import com.roozie.roozieplugin.emotes.EmoteManager;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -11,7 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 
-public class RooziesPlugin extends JavaPlugin implements Listener{
+public class RooziesPlugin extends JavaPlugin implements Listener {
 
     private RoleManager roleManager;
     private EmoteManager emoteManager;
@@ -25,8 +25,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener{
         this.roleManager = new RoleManager(this);
         this.emoteManager = new EmoteManager(this);
 
-        Bukkit.getPluginManager().registerEvent(roleManager, this);
-
+        Bukkit.getPluginManager().registerEvents(roleManager, this);
         getLogger().info("RooziesPlugin ingeschakeld!");
 
         for (Player speler : Bukkit.getOnlinePlayers()) {
@@ -35,7 +34,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener{
     }
 
     @Override
-    public void onDisable(){
+    public void onDisable() {
         getLogger().info("RooziesPlugin uitgeschakeld.");
     }
 

@@ -3,176 +3,88 @@ emotes:
     message: "Je zwaait vrolijk!"
     sound: ENTITY_PLAYER_LEVELUP
     actions:
-      - SWING_ARM
+      - name: SWING_ARM
+        type: bukkit_action
     duration: 3
 
   cry:
     message: "Je huilt verdrietig."
     sound: ENTITY_PLAYER_HURT
     actions:
-      - LOWER_HEAD
+      - name: LOWER_HEAD
+        type: message
+        message: "* Je buigt je hoofd."
     duration: 4
 
   sit:
     message: "Je gaat zitten."
     actions:
-      - SIT
+      - name: SIT
+        type: message
+        message: "* Je zit op de grond."
     duration: 0
 
   blush:
     message: "Je bloost verlegen."
     actions:
-      - BLUSH
+      - name: BLUSH
+        type: message
+        message: "* Je bloost."
     duration: 5
 
   love:
     message: "Je kijkt verliefd met hartjes ogen."
     sound: ENTITY_PLAYER_LEVELUP
     actions:
-      - LOVE_EYES
+      - name: LOVE_EYES
+        type: message
+        message: "* Je ogen vullen zich met hartjes."
     duration: 5
-
-  pain:
-    message: "Je voelt pijn!"
-    sound: ENTITY_PLAYER_HURT
-    actions:
-      - SWING_ARM
-      - LOWER_HEAD
-    duration: 4
 
   angry:
     message: "Je bent boos!"
-    sound: ENTITY_PLAYER_ANGRY
+    sound: ENTITY_PLAYER_HURT
     actions:
-      - SWING_ARM
-      - LOWER_HEAD
+      - name: SWING_ARM
+        type: bukkit_action
+      - name: LOWER_HEAD
+        type: message
+        message: "* Je kijkt boos omlaag."
     duration: 4
-
-  shocked:
-    message: "Je bent geschrokken!"
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
-    actions:
-      - JUMP_BACK
-    duration: 3
-
-  ashamed:
-    message: "Je voelt je beschaamd."
-    actions:
-      - LOWER_HEAD
-      - BLUSH
-    duration: 5
 
   laugh:
     message: "Je lacht hard."
     sound: ENTITY_PLAYER_LEVELUP
     actions:
-      - LAUGH
+      - name: LAUGH
+        type: message
+        message: "* Je lacht luid."
     duration: 4
-
-  lie_down:
-    message: "Je ligt nu neer."
-    actions:
-      - LIE_DOWN
-    duration: 0
-
-  scared:
-    message: "Je bent bang!"
-    sound: ENTITY_ZOMBIE_VILLAGER_CONVERTED
-    actions:
-      - SHAKE
-    duration: 5
-
-  jealous:
-    message: "Je bent jaloers."
-    actions:
-      - LOWER_HEAD
-      - BLUSH
-    duration: 4
-
-  shy:
-    message: "Je bent verlegen."
-    actions:
-      - BLUSH
-      - LOWER_HEAD
-    duration: 5
-
-  surprised:
-    message: "Je bent verbaasd!"
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
-    actions:
-      - JUMP
-    duration: 3
-
-  proud:
-    message: "Je bent trots!"
-    actions:
-      - STAND_TALL
-    duration: 4
-
-  serious:
-    message: "Je bent serieus."
-    actions:
-      - STILL
-    duration: 0
-
-  calm:
-    message: "Je bent rustig."
-    actions:
-      - BREATH_DEEP
-    duration: 5
-
-  dream:
-    message: "Je droomt weg..."
-    actions:
-      - CLOSE_EYES
-    duration: 5
 
   sleep:
-    message: "Je gaat slapen."
+    message: "Je valt in slaap..."
     actions:
-      - LIE_DOWN
-      - CLOSE_EYES
-    duration: 0
-
-  kneel:
-    message: "Je knielt neer."
-    actions:
-      - KNEEL
+      - name: LIE_DOWN
+        type: message
+        message: "* Je ligt neer."
+      - name: CLOSE_EYES
+        type: message
+        message: "* Je sluit je ogen."
     duration: 0
 
   hug:
-    message: "Je omhelst iemand."
+    message: "Je geeft een knuffel."
     actions:
-      - HUG
+      - name: HUG
+        type: message
+        message: "* Je omhelst iemand."
     duration: 5
 
-  push:
-    message: "Je duwt iemand."
+  kiss:
+    message: "Je geeft een kus."
+    sound: ENTITY_PLAYER_LEVELUP
     actions:
-      - PUSH
-    duration: 2
-
-  grab:
-    message: "Je pakt iets vast."
-    actions:
-      - GRAB
-    duration: 3
-
-  fall:
-    message: "Je valt om."
-    actions:
-      - FALL
-    duration: 3
-
-kiss:
-  message: "Je geeft een kus."
-  sound: ENTITY_PLAYER_LEVELUP
-  actions:
-    - KISS
-  duration: 4
-
-  hold_hand:
-    message: "Je houdt iemands hand vast."
-    actions:
-      - HOLD_HAND
-    duration: 5
+      - name: KISS
+        type: message
+        message: "* Je geeft een kus."
+    duration: 4

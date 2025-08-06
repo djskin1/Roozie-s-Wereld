@@ -1,5 +1,6 @@
 package com.roozie.roozieplugin.roles;
 
+import com.roozie.roozieplugin.RooziesPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -20,26 +21,21 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-
 public class RoleManager implements Listener {
 
-    private final RooziesPlugin.RooziesPlugin plugin;
+    private final RooziesPlugin plugin;
     private File rolesFile;
     private FileConfiguration rolesConfig;
     private final Map<UUID, String> spelerRollen = new HashMap<>();
 
-    public RoleManager(RooziesPlugin.RooziesPlugin plugin) {
+    public RoleManager(RooziesPlugin plugin) {
         this.plugin = plugin;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         createRolesConfig();
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     private void createRolesConfig() {
-        rolesFile = new File(plugin.getDataFolder(), "roles.yml");
+        rolesFile = plugin.getRolesFile();
         if (!rolesFile.exists()) {
             try {
                 plugin.getDataFolder().mkdirs();
@@ -72,11 +68,14 @@ public class RoleManager implements Listener {
         }
 
         String rol = rolesConfig.getString(uuid.toString());
+        spelerRollen.put(uuid, rol);
         speler.sendMessage("§aWelkom terug! Je rol is: §e" + rol);
     }
 
     public void openRoleMenu(Player speler) {
-        ConfigurationSection rollenSectie = plugin.getMenuConfig().getConfigurationSection("rollen");
+        FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
+        ConfigurationSection rollenSectie = menuConfig.getConfigurationSection("rollen");
+
         if (rollenSectie == null) {
             speler.sendMessage("§cEr zijn geen rollen geconfigureerd! Neem contact op met een admin.");
             return;
@@ -84,15 +83,16 @@ public class RoleManager implements Listener {
 
         Inventory menu = Bukkit.createInventory(null, 9, "Kies je rol");
         int slot = 0;
+
         for (String rolNaam : rollenSectie.getKeys(false)) {
             ConfigurationSection rolSectie = rollenSectie.getConfigurationSection(rolNaam);
             if (rolSectie == null) continue;
 
             Material materiaal = Material.getMaterial(rolSectie.getString("materiaal", "STONE"));
+            if (materiaal == null) materiaal = Material.STONE;
+
             String lore = rolSectie.getString("lore", "");
             String permissie = rolSectie.getString("permissie", "");
-
-            if (materiaal == null) materiaal = Material.STONE;
 
             if (permissie.isEmpty() || speler.hasPermission(permissie)) {
                 menu.setItem(slot++, createMenuItem(materiaal, rolNaam, lore));
@@ -106,9 +106,9 @@ public class RoleManager implements Listener {
         ItemStack item = new ItemStack(materiaal);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(naam);
+            meta.setDisplayName("§e" + naam);
             if (!lore.isEmpty()) {
-                meta.setLore(Collections.singletonList(lore));
+                meta.setLore(Collections.singletonList("§7" + lore));
             }
             item.setItemMeta(meta);
         }
@@ -125,11 +125,12 @@ public class RoleManager implements Listener {
         if (clickedItem == null || clickedItem.getType() == Material.AIR || !clickedItem.hasItemMeta()) return;
 
         Player speler = (Player) event.getWhoClicked();
-        String gekozenRol = clickedItem.getItemMeta().getDisplayName();
+        String gekozenRol = clickedItem.getItemMeta().getDisplayName().replace("§e", "");
 
-        ConfigurationSection rolSectie = plugin.getMenuConfig().getConfigurationSection("rollen." + gekozenRol);
+        FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
+        ConfigurationSection rolSectie = menuConfig.getConfigurationSection("rollen." + gekozenRol);
         if (rolSectie == null) {
-            speler.sendMessage("§cDeze rol bestaat niet (meer).”);
+            speler.sendMessage("§cDeze rol bestaat niet (meer).");
             return;
         }
 
@@ -163,6 +164,10 @@ public class RoleManager implements Listener {
         openRoleMenu(speler);
     }
 
+    public void zetSpelerInVerborgenTeam(Player speler) {
+        verbergNaam(speler);
+    }
+
     private void verbergNaam(Player speler) {
         Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
         Team team = scoreboard.getTeam("verborgen");
@@ -176,5 +181,17 @@ public class RoleManager implements Listener {
         if (!team.hasEntry(speler.getName())) {
             team.addEntry(speler.getName());
         }
+    }
+
+    public boolean handleCommand(org.bukkit.command.CommandSender sender, org.bukkit.command.Command command, String label, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player speler = (Player) sender;
+
+        if (command.getName().equalsIgnoreCase("resetrol")) {
+            resetRol(speler);
+            return true;
+        }
+
+        return false;
     }
 }
