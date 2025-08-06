@@ -1,1 +1,5 @@
 com\roozie\roozieplugin\RooziesPlugin.class
+Teams\Teams.class
+com\roozie\roozieplugin\emotes\EmoteManager.class
+com\roozie\roozieplugin\roles\RoleManager.class
+Namenweg\Namenweg.class
