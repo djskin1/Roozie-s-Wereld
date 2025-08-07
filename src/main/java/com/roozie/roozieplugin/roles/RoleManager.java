@@ -1,6 +1,7 @@
 package com.roozie.roozieplugin.roles;
 
-import com.roozie.roozieplugin.RooziesPlugin;
+import 
+        com.roozie.roozieplugin.RooziesPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -14,6 +15,10 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.Node;
 
 import java.io.File;
 import java.io.IOException;
