@@ -23,7 +23,21 @@
       <version>1.21.5-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+
+      <dependency>
+          <groupId>net.luckperms</groupId>
+          <artifactId>api</artifactId>
+          <version>5.4</version>
+          <scope>provided</scope>
+      </dependency>
   </dependencies>
+
+    <repositories>
+        <repository>
+            <id>luckperms</id>
+            <url>https://repo.lucko.me</url>
+        </repository>
+    </repositories>
 
   <build>
     <plugins>

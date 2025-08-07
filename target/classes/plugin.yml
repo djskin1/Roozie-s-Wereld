@@ -4,6 +4,8 @@ main: com.roozie.roozieplugin.RooziesPlugin
 description: A custom plugin for roleplay
 author: Djskinproductions, FutureVoyager
 api-version: 1.21
+softdepend:
+  - [LuckPerms]
 
 commands:
   help:
