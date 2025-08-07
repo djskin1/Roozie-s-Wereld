@@ -1,6 +1,6 @@
 package com.roozie.roozieplugin.roles;
 
-import 
+import
         com.roozie.roozieplugin.RooziesPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
