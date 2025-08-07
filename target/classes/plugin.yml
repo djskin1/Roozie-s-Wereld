@@ -2,16 +2,22 @@ name: RooziesPlugin
 version: 0.1-1.21.5
 main: com.roozie.roozieplugin.RooziesPlugin
 description: A custom plugin for roleplay
-author: Djskinproductions
+author: Djskinproductions, FutureVoyager
 api-version: 1.21
 
 commands:
   help:
     description: Toon help informatie
     usage: /help
+
   resetrol:
     description: Reset jouw rol en kies opnieuw
     usage: /resetrol
+
+  togglename:
+    description: Zet naamzichtbaarheid aan of uit
+    usage: /togglename
+    permission: roozie.name.toggle
 
   # Emote commands
   emote:
@@ -77,12 +83,19 @@ permissions:
   roozie.help:
     description: Toegang tot /help
     default: true
+
   roozie.rol.ultima:
     description: Mag de Ultima Weerwolf rol kiezen
     default: op
+
   roozie.rol.herkiezen:
     description: Mag opnieuw een rol kiezen
     default: op
+
   roozie.rol.reset:
     description: Mag zijn/haar rol resetten
     default: op
+
+  roozie.name.toggle:
+    description: Toggle naamzichtbaarheid aan/uit
+    default: true

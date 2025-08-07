@@ -29,7 +29,7 @@ public class EmoteManager {
                 emoteFile.createNewFile();
                 plugin.saveResource("emotes.yml", false);
             } catch (IOException e) {
-                Bukkit.getLogger().severe("Kon emotes.yml niet aanmaken!");
+                Bukkit.getLogger().severe("Kon com.roozie.roozieplugin.Namenweg.Namenweg.emotes.yml niet aanmaken!");
                 e.printStackTrace();
             }
         }
@@ -60,7 +60,7 @@ public class EmoteManager {
     }
 
     public void performEmote(Player speler, String emoteName) {
-        String path = "emotes." + emoteName;
+        String path = "com.roozie.roozieplugin.Namenweg.Namenweg.emotes." + emoteName;
         if (!emoteConfig.contains(path)) {
             speler.sendMessage("❌ Deze emote bestaat niet.");
             return;

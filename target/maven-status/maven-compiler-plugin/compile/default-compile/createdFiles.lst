@@ -1,5 +1,8 @@
+com\roozie\roozieplugin\Teams\Teams.class
 com\roozie\roozieplugin\RooziesPlugin.class
-Teams\Teams.class
 com\roozie\roozieplugin\emotes\EmoteManager.class
+com\roozie\roozieplugin\Namenweg\NameVisibilityListener.class
+com\roozie\roozieplugin\Namenweg\ToggleNameCommand.class
+com\roozie\roozieplugin\Namenweg\NameVisibilityManager.class
 com\roozie\roozieplugin\roles\RoleManager.class
-Namenweg\Namenweg.class
+com\roozie\roozieplugin\Namenweg\Namenweg.class

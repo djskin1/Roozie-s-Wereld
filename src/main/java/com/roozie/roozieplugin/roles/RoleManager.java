@@ -41,7 +41,7 @@ public class RoleManager implements Listener {
                 plugin.getDataFolder().mkdirs();
                 rolesFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("Kon roles.yml niet aanmaken!");
+                plugin.getLogger().severe("Kon com.roozie.roozieplugin.Namenweg.Namenweg.roles.yml niet aanmaken!");
                 e.printStackTrace();
             }
         }

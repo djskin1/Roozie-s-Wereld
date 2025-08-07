@@ -70,7 +70,7 @@ public class RooziesPlugin extends JavaPlugin implements Listener {
     }
 
     public File getRolesFile() {
-        return new File(getDataFolder(), "roles.yml");
+        return new File(getDataFolder(), "com.roozie.roozieplugin.Namenweg.Namenweg.roles.yml");
     }
 
     public File getMenuConfigFile() {
