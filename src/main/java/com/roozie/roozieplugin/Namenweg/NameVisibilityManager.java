@@ -1,6 +1,10 @@
 package com.roozie.roozieplugin.Namenweg;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
@@ -8,46 +12,62 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-public class NameVisibilityManager {
+public class NameVisibilityManager implements Listener {
 
-    private static final Set<UUID> hiddenPlayers = new HashSet<>();
-    private static final String TEAM_ID = "nametoggle_team";
+    private final Set<UUID> playersHidingNametags = new HashSet<>();
 
-    public static boolean isNameHidden(Player player) {
-        return hiddenPlayers.contains(player.getUniqueId());
+    public void hideOthersNametagsFor(Player player) {
+        Scoreboard scoreboard = Bukkit.getScoreboardManager().getNewScoreboard(); // Nieuw scoreboard per speler
+        Team team = scoreboard.registerNewTeam("hidden");
+
+        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+        team.setCanSeeFriendlyInvisibles(false);
+        team.setAllowFriendlyFire(true);
+
+        // Voeg alle andere spelers toe aan deze team
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (!other.equals(player)) {
+                team.addEntry(other.getName());
+            }
+        }
+
+        player.setScoreboard(scoreboard);
+        playersHidingNametags.add(player.getUniqueId());
     }
 
-    public static void setNameHidden(Player player, boolean hidden) {
-        if (hidden) {
-            hiddenPlayers.add(player.getUniqueId());
+    public void resetScoreboard(Player player) {
+        player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        playersHidingNametags.remove(player.getUniqueId());
+    }
+
+    public boolean isHidingNametags(Player player) {
+        return playersHidingNametags.contains(player.getUniqueId());
+    }
+
+    public boolean toggleNameVisibility(Player player) {
+        if (isHidingNametags(player)) {
+            resetScoreboard(player);
+            return true; // Naamtags zijn nu zichtbaar
         } else {
-            hiddenPlayers.remove(player.getUniqueId());
+            hideOthersNametagsFor(player);
+            return false; // Naamtags zijn nu verborgen
         }
     }
 
-    public static void applyNameVisibility(Player player) {
-        boolean hidden = isNameHidden(player)
-                || (!hiddenPlayers.contains(player.getUniqueId())
-                && Namenweg.getInstance().getPluginConfig().getBoolean("namenweg.standaard-uit", true));
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player joiner = event.getPlayer();
 
-        Scoreboard board = player.getScoreboard();
-        Team team = board.getTeam(TEAM_ID);
-        if (team == null) {
-            team = board.registerNewTeam(TEAM_ID);
-            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-        }
-
-        // Verwijder speler uit alle andere teams
-        for (Team t : board.getTeams()) {
-            t.removePlayer(player);
-        }
-
-        if (hidden) {
-            team.addPlayer(player);
-            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-        } else {
-            team.removePlayer(player);
-            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+        // Voor alle spelers die anderen verbergen → voeg de nieuwe speler ook toe aan hun team
+        for (UUID uuid : playersHidingNametags) {
+            Player hider = Bukkit.getPlayer(uuid);
+            if (hider != null && hider.isOnline()) {
+                Scoreboard scoreboard = hider.getScoreboard();
+                Team team = scoreboard.getTeam("hidden");
+                if (team != null) {
+                    team.addEntry(joiner.getName());
+                }
+            }
         }
     }
 }

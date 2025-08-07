@@ -14,8 +14,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +39,7 @@ public class RoleManager implements Listener {
                 plugin.getDataFolder().mkdirs();
                 rolesFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("Kon com.roozie.roozieplugin.Namenweg.Namenweg.roles.yml niet aanmaken!");
+                plugin.getLogger().severe("Kon roles.yml niet aanmaken!");
                 e.printStackTrace();
             }
         }
@@ -60,7 +58,6 @@ public class RoleManager implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player speler = event.getPlayer();
         UUID uuid = speler.getUniqueId();
-        verbergNaam(speler);
 
         if (!rolesConfig.contains(uuid.toString()) || speler.hasPermission("roozie.rol.herkiezen")) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> openRoleMenu(speler), 20L);
@@ -162,25 +159,6 @@ public class RoleManager implements Listener {
 
         speler.sendMessage("§aJe rol is gereset. Kies opnieuw...");
         openRoleMenu(speler);
-    }
-
-    public void zetSpelerInVerborgenTeam(Player speler) {
-        verbergNaam(speler);
-    }
-
-    private void verbergNaam(Player speler) {
-        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-        Team team = scoreboard.getTeam("verborgen");
-
-        if (team == null) {
-            team = scoreboard.registerNewTeam("verborgen");
-            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-        }
-
-        if (!team.hasEntry(speler.getName())) {
-            team.addEntry(speler.getName());
-        }
     }
 
     public boolean handleCommand(org.bukkit.command.CommandSender sender, org.bukkit.command.Command command, String label, String[] args) {

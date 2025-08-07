@@ -5,4 +5,3 @@ com\roozie\roozieplugin\Namenweg\NameVisibilityListener.class
 com\roozie\roozieplugin\Namenweg\ToggleNameCommand.class
 com\roozie\roozieplugin\Namenweg\NameVisibilityManager.class
 com\roozie\roozieplugin\roles\RoleManager.class
-com\roozie\roozieplugin\Namenweg\Namenweg.class
