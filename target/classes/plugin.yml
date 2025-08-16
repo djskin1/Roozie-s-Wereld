@@ -9,6 +9,10 @@ commands:
   help:
     description: Toon help informatie
     usage: /help
+    
+  herkies:
+    description: herkies jou rol
+    usage: /herkies
 
   resetrol:
     description: Reset jouw rol en kies opnieuw
