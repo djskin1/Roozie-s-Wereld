@@ -1,4 +1,4 @@
-com\roozie\roozieplugin\Teams\Teams.class
+com\roozie\roozieplugin\teams\TeamManager.class
 com\roozie\roozieplugin\RooziesPlugin.class
 com\roozie\roozieplugin\emotes\EmoteManager.class
 com\roozie\roozieplugin\Namenweg\NameVisibilityListener.class

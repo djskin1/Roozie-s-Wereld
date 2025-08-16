@@ -48,7 +48,7 @@ rollen:
   Duivel:
     materiaal: wither_skeleton_skull
     lore: "Wordt een de baas van de horde demonen"
-    permissie: rol.duivel
+    permissie: duivel
     lp_group: duivel
     glow: true
     hide_enchants: true
