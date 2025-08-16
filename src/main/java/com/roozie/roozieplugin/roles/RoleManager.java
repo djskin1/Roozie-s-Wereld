@@ -24,6 +24,7 @@ import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import net.luckperms.api.node.Node;
+import net.luckperms.api.node.types.InheritanceNode;
 
 import org.geysermc.floodgate.api.FloodgateApi;
 
@@ -55,11 +56,7 @@ public class RoleManager implements Listener {
         rolesFile = plugin.getRolesFile();
         if (!rolesFile.exists()) {
             try {
-                if (!plugin.getDataFolder().exists()) {
-                    //noinspection ResultOfMethodCallIgnored
-                    plugin.getDataFolder().mkdirs();
-                }
-                //noinspection ResultOfMethodCallIgnored
+                if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdirs();
                 rolesFile.createNewFile();
             } catch (IOException e) {
                 plugin.getLogger().severe("Kon roles.yml niet aanmaken!");
@@ -319,14 +316,15 @@ public class RoleManager implements Listener {
             LuckPerms lp = LuckPermsProvider.get();
 
             lp.getUserManager().modifyUser(uuid, (User user) -> {
-                // Verwijder alle bestaande group.* nodes (optioneel)
+                // Verwijder bestaande group-inheritances (optioneel — pas aan als je meerdere groups wil toestaan)
                 List<Node> toRemove = user.data().toCollection().stream()
-                        .filter(n -> n.getKey().startsWith("group."))
+                        .filter(n -> n instanceof InheritanceNode)
                         .collect(Collectors.toList());
                 toRemove.forEach(n -> user.data().remove(n));
 
-                // Voeg nieuwe group toe
-                user.data().add(Node.builder("group." + groupName.toLowerCase()).build());
+                // Voeg nieuwe group inheritance toe en zet desnoods primary group
+                user.data().add(InheritanceNode.builder(groupName.toLowerCase()).build());
+                try { user.setPrimaryGroup(groupName.toLowerCase()); } catch (Throwable ignored) {}
             });
         } catch (Throwable t) {
             plugin.getLogger().warning("Kon LuckPerms group niet toepassen voor " + uuid + ": " + t.getMessage());
@@ -340,7 +338,7 @@ public class RoleManager implements Listener {
 
             lp.getUserManager().modifyUser(uuid, (User user) -> {
                 List<Node> toRemove = user.data().toCollection().stream()
-                        .filter(n -> n.getKey().startsWith("group."))
+                        .filter(n -> n instanceof InheritanceNode)
                         .collect(Collectors.toList());
                 toRemove.forEach(n -> user.data().remove(n));
             });
