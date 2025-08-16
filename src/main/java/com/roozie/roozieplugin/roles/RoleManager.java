@@ -1,6 +1,7 @@
 package com.roozie.roozieplugin.roles;
 
 import com.roozie.roozieplugin.RooziesPlugin;
+import com.roozie.roozieplugin.teams.TeamManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -37,15 +38,17 @@ import java.util.stream.Collectors;
 public class RoleManager implements Listener {
 
     private final RooziesPlugin plugin;
+    private final TeamManager teamManager;
     private File rolesFile;
     private FileConfiguration rolesConfig;
     private final Map<UUID, String> spelerRollen = new HashMap<>();
 
     private static final String MENU_TITLE = ChatColor.YELLOW + "Kies je rol";
-    private static final String STAFF_PREFIX = "group.s_"; // rollen met dit prefix kun je niet resetten
+    private static final String STAFF_PREFIX = "s_"; // rollen met dit prefix kun je niet resetten
 
-    public RoleManager(RooziesPlugin plugin) {
+    public RoleManager(RooziesPlugin plugin, TeamManager teamManager) {
         this.plugin = plugin;
+        this.teamManager = teamManager;
         createRolesConfig();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -107,27 +110,37 @@ public class RoleManager implements Listener {
         if (meta == null || !meta.hasDisplayName()) return;
 
         String gekozenRol = ChatColor.stripColor(meta.getDisplayName());
-
         FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
         ConfigurationSection rolSectie = menuConfig.getConfigurationSection("rollen." + gekozenRol);
         if (rolSectie == null) { speler.sendMessage(color("&cDeze rol bestaat niet (meer).")); return; }
 
+        // permissie (maar upgrade-rollen kunnen permissie-bypass hebben ALS player owner is en basisrol heeft)
         String vereistePermissie = rolSectie.getString("permissie", "");
-        if (vereistePermissie != null && !vereistePermissie.isEmpty() && !speler.hasPermission(vereistePermissie)) {
+        boolean permissionOk = vereistePermissie == null || vereistePermissie.isEmpty() || speler.hasPermission(vereistePermissie);
+
+        // upgrade bypass?
+        String current = rolesConfig.getString(getStorageKey(speler), null);
+        boolean isUpgradeTarget = isUpgradeTarget(gekozenRol);
+        boolean upgradeAllowed = false;
+        if (isUpgradeTarget && teamManager.isOwner(speler.getUniqueId())) {
+            String baseNeeded = getBaseForTarget(gekozenRol);
+            if (baseNeeded != null && current != null && current.equalsIgnoreCase(baseNeeded)) {
+                upgradeAllowed = true; // bypass permissie voor upgrade
+            }
+        }
+
+        if (!permissionOk && !upgradeAllowed) {
             speler.sendMessage(color("&cJe hebt geen permissie voor deze rol."));
             return;
         }
 
         String lpGroup = rolSectie.getString("lp_group", gekozenRol);
 
-        // opslaan
         String storageKey = getStorageKey(speler);
         rolesConfig.set(storageKey, gekozenRol);
         saveRolesConfig();
 
         spelerRollen.put(speler.getUniqueId(), gekozenRol);
-
-        // LuckPerms (Java UUID als gelinkt)
         applyLuckPermsGroup(resolveLuckPermsTargetUuid(speler), lpGroup);
 
         speler.sendMessage(color("&aJe hebt gekozen voor de rol: &e" + gekozenRol));
@@ -166,6 +179,22 @@ public class RoleManager implements Listener {
             items.add(item);
         }
 
+        // === Injecteer upgrade-item als speler owner is en basisrol heeft ===
+        String current = rolesConfig.getString(getStorageKey(speler), null);
+        if (teamManager.isOwner(speler.getUniqueId()) && current != null) {
+            String target = getUpgradeFor(current);
+            if (target != null && rollenSectie.isConfigurationSection(target)) {
+                ConfigurationSection rs = rollenSectie.getConfigurationSection(target);
+                String materiaalStr = rs.getString("materiaal", "NETHER_STAR");
+                Material materiaal = Material.matchMaterial(materiaalStr != null ? materiaalStr : "NETHER_STAR");
+                if (materiaal == null) materiaal = Material.NETHER_STAR;
+                List<String> lore = new ArrayList<>(rs.isList("lore") ? rs.getStringList("lore") : Collections.singletonList(rs.getString("lore", "&7Upgrade beschikbaar (team owner)")));
+                lore.add("&6Upgrade-item (team owner)");
+                ItemStack upgradeItem = createMenuItem(materiaal, target, lore, rs);
+                items.add(upgradeItem);
+            }
+        }
+
         if (items.isEmpty()) { speler.sendMessage(color("&cEr zijn geen rollen die jij kunt kiezen.")); return; }
 
         int size = calcInventorySize(items.size());
@@ -188,13 +217,37 @@ public class RoleManager implements Listener {
             return;
         }
 
-        // terug naar default group (LP) + opslag legen
         setLuckPermsToDefault(resolveLuckPermsTargetUuid(speler));
         rolesConfig.set(storageKey, null);
         saveRolesConfig();
 
         speler.sendMessage(color("&aJe bent teruggezet naar de standaardgroep. Kies opnieuw..."));
         openRoleMenu(speler);
+    }
+
+    /** /rolupgrade — promoot basisrol naar target m.b.v. mapping in config als speler team-owner is */
+    private void upgradeRol(Player speler) {
+        if (!teamManager.isOwner(speler.getUniqueId())) {
+            speler.sendMessage(color("&cAlleen team-owners kunnen upgraden."));
+            return;
+        }
+        String key = getStorageKey(speler);
+        String current = rolesConfig.getString(key, null);
+        if (current == null) { speler.sendMessage(color("&cJe hebt nog geen basisrol gekozen.")); return; }
+
+        String target = getUpgradeFor(current);
+        if (target == null) { speler.sendMessage(color("&eGeen upgrade beschikbaar voor jouw rol.")); return; }
+
+        // Permissie check overslaan voor upgrade
+        FileConfiguration menuCfg = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
+        ConfigurationSection rs = menuCfg.getConfigurationSection("rollen." + target);
+        String lpGroup = (rs != null) ? rs.getString("lp_group", target) : target;
+
+        rolesConfig.set(key, target);
+        saveRolesConfig();
+        applyLuckPermsGroup(resolveLuckPermsTargetUuid(speler), lpGroup);
+
+        speler.sendMessage(color("&aJe bent geüpgraded van &e" + current + " &anaar &e" + target + "&a."));
     }
 
     public boolean handleCommand(CommandSender sender, org.bukkit.command.Command command, String label, String[] args) {
@@ -206,6 +259,11 @@ public class RoleManager implements Listener {
         if (command.getName().equalsIgnoreCase("rolmenu")) {
             if (!(sender instanceof Player)) { sender.sendMessage(color("&cAlleen spelers kunnen dit menu openen.")); return true; }
             openRoleMenu((Player) sender);
+            return true;
+        }
+        if (command.getName().equalsIgnoreCase("rolupgrade")) {
+            if (!(sender instanceof Player)) { sender.sendMessage(color("&cAlleen spelers kunnen upgraden.")); return true; }
+            upgradeRol((Player) sender);
             return true;
         }
         return false;
@@ -391,5 +449,37 @@ public class RoleManager implements Listener {
             if (byKey != null) return byKey;
         } catch (Throwable ignored) {}
         return Enchantment.getByName(id.toUpperCase());
+    }
+
+    /* ===== Upgrade mapping helpers ===== */
+
+    private String getUpgradeFor(String baseRole) {
+        if (baseRole == null) return null;
+        ConfigurationSection map = plugin.getConfig().getConfigurationSection("roles.role_upgrades");
+        if (map == null) return null;
+        for (String base : map.getKeys(false)) {
+            if (baseRole.equalsIgnoreCase(base)) return map.getString(base);
+        }
+        return null;
+    }
+
+    private boolean isUpgradeTarget(String targetRole) {
+        ConfigurationSection map = plugin.getConfig().getConfigurationSection("roles.role_upgrades");
+        if (map == null) return false;
+        for (String base : map.getKeys(false)) {
+            String v = map.getString(base);
+            if (v != null && v.equalsIgnoreCase(targetRole)) return true;
+        }
+        return false;
+    }
+
+    private String getBaseForTarget(String targetRole) {
+        ConfigurationSection map = plugin.getConfig().getConfigurationSection("roles.role_upgrades");
+        if (map == null) return null;
+        for (String base : map.getKeys(false)) {
+            String v = map.getString(base);
+            if (v != null && v.equalsIgnoreCase(targetRole)) return base;
+        }
+        return null;
     }
 }

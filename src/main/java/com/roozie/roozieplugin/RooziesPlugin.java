@@ -2,6 +2,7 @@ package com.roozie.roozieplugin;
 
 import com.roozie.roozieplugin.emotes.EmoteManager;
 import com.roozie.roozieplugin.roles.RoleManager;
+import com.roozie.roozieplugin.teams.TeamManager;
 import com.roozie.roozieplugin.Namenweg.NameVisibilityManager;
 import com.roozie.roozieplugin.Namenweg.ToggleNameCommand;
 import org.bukkit.Bukkit;
@@ -19,30 +20,29 @@ import java.io.File;
 public class RooziesPlugin extends JavaPlugin {
 
     private RoleManager roleManager;
+    private TeamManager teamManager;
     private EmoteManager emoteManager;
     private NameVisibilityManager nameVisibilityManager;
 
-    // Bestanden & config voor menu_config.yml
+    // menu_config.yml
     private File menuConfigFile;
     private FileConfiguration menuConfig;
 
-    // roles.yml runtime-bestand
+    // roles.yml (runtime)
     private File rolesFile;
+
+    // teams.yml (runtime)
+    private File teamsFile;
 
     @Override
     public void onEnable() {
-        // 📁 Zorg dat pluginmap bestaat
         if (!getDataFolder().exists()) getDataFolder().mkdirs();
+        saveDefaultConfig(); // roles.default_group en roles.role_upgrades
 
-        // 📄 config.yml (indien aanwezig in resources)
-        saveDefaultConfig();
-
-        // 📄 menu_config.yml: ALLEEN kopiëren als 'ie nog niet bestaat
+        // menu_config.yml: eenmalig kopiëren + defaults mergen
         saveResource("menu_config.yml", false);
         menuConfigFile = new File(getDataFolder(), "menu_config.yml");
         menuConfig = YamlConfiguration.loadConfiguration(menuConfigFile);
-
-        // Merge defaults uit JAR -> vult ontbrekende keys aan, overschrijft GEEN user-waarden
         try (InputStream in = getResource("menu_config.yml")) {
             if (in != null) {
                 YamlConfiguration def = YamlConfiguration.loadConfiguration(
@@ -55,56 +55,43 @@ public class RooziesPlugin extends JavaPlugin {
             getLogger().warning("Kon menu_config.yml defaults niet mergen: " + e.getMessage());
         }
 
-        // 📄 emotes.yml: ALLEEN kopiëren als 'ie nog niet bestaat (geen merge nodig tenzij jij dat wilt)
+        // emotes.yml: eenmalig kopiëren
         saveResource("emotes.yml", false);
 
-        // 📄 roles.yml: NOOIT uit JAR schrijven; alleen runtime-bestand aanmaken
+        // roles.yml: runtime
         rolesFile = new File(getDataFolder(), "roles.yml");
-        try {
-            if (!rolesFile.exists()) rolesFile.createNewFile();
-        } catch (IOException e) {
-            getLogger().severe("Kon roles.yml niet aanmaken!");
-            e.printStackTrace();
-        }
+        try { if (!rolesFile.exists()) rolesFile.createNewFile(); }
+        catch (IOException e) { getLogger().severe("Kon roles.yml niet aanmaken!"); e.printStackTrace(); }
 
-        // 🧠 Managers
-        this.roleManager = new RoleManager(this);   // registreert zichzelf als Listener in de constructor
+        // teams.yml: runtime
+        teamsFile = new File(getDataFolder(), "teams.yml");
+        try { if (!teamsFile.exists()) teamsFile.createNewFile(); }
+        catch (IOException e) { getLogger().severe("Kon teams.yml niet aanmaken!"); e.printStackTrace(); }
+
+        // Managers
+        this.teamManager = new TeamManager(this);   // bevat eigen command-handler
+        this.roleManager = new RoleManager(this, teamManager); // registreert zichzelf als Listener
         this.emoteManager = new EmoteManager(this);
         this.nameVisibilityManager = new NameVisibilityManager();
 
-        // 📌 Events registreren (NIET nog eens RoleManager, om dubbel afvuren te voorkomen)
+        // Events (RoleManager NIET dubbel registreren)
         Bukkit.getPluginManager().registerEvents(nameVisibilityManager, this);
 
-        // ⚙️ Commands
-        // ToggleName via eigen executor
-        if (getCommand("togglename") != null) {
+        // Commands
+        if (getCommand("togglename") != null)
             getCommand("togglename").setExecutor(new ToggleNameCommand(nameVisibilityManager));
-        }
 
-        // Emote commands -> doorgeven aan EmoteManager
-        String[] emotes = {
-                "wave", "cry", "sit", "kiss", "holdhand", "blush", "love", "pain", "angry",
-                "shocked", "ashamed", "laugh", "lie_down", "scared", "jealous", "shy",
-                "surprised", "proud", "serious", "calm", "dream", "sleep", "kneel",
-                "hug", "push", "grab", "fall"
-        };
-        for (String emote : emotes) {
-            if (getCommand(emote) != null) {
-                getCommand(emote).setExecutor((sender, command, label, args) ->
-                        emoteManager.handleCommand(sender, command, label, new String[]{emote}));
-            }
-        }
+        if (getCommand("team") != null)
+            getCommand("team").setExecutor((s,c,l,a) -> teamManager.handleCommand(s,c,l,a));
 
-        // Role commands -> expliciet aan RoleManager koppelen (alternatief voor onCommand fallback)
-        if (getCommand("rolmenu") != null) {
-            getCommand("rolmenu").setExecutor((sender, cmd, label, args) -> roleManager.handleCommand(sender, cmd, label, args));
-        }
-        if (getCommand("resetrol") != null) {
-            getCommand("resetrol").setExecutor((sender, cmd, label, args) -> roleManager.handleCommand(sender, cmd, label, args));
-        }
+        if (getCommand("rolmenu") != null)
+            getCommand("rolmenu").setExecutor((s,c,l,a) -> roleManager.handleCommand(s,c,l,a));
+        if (getCommand("resetrol") != null)
+            getCommand("resetrol").setExecutor((s,c,l,a) -> roleManager.handleCommand(s,c,l,a));
+        if (getCommand("rolupgrade") != null)
+            getCommand("rolupgrade").setExecutor((s,c,l,a) -> roleManager.handleCommand(s,c,l,a));
 
-        // /roozie reload -> herlaadt alleen menu_config.yml (handig voor live tweaks)
-        if (getCommand("roozie") != null) {
+        if (getCommand("roozie") != null)
             getCommand("roozie").setExecutor((sender, cmd, label, args) -> {
                 if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
                     reloadMenuConfig();
@@ -114,54 +101,46 @@ public class RooziesPlugin extends JavaPlugin {
                 sender.sendMessage("§eGebruik: /roozie reload");
                 return true;
             });
+
+        // Emote commands
+        String[] emotes = {
+                "wave","cry","sit","kiss","holdhand","blush","love","pain","angry",
+                "shocked","ashamed","laugh","lie_down","scared","jealous","shy",
+                "surprised","proud","serious","calm","dream","sleep","kneel",
+                "hug","push","grab","fall"
+        };
+        for (String emote : emotes) {
+            if (getCommand(emote) != null) {
+                getCommand(emote).setExecutor((sender, command, label, args) ->
+                        emoteManager.handleCommand(sender, command, label, new String[]{emote}));
+            }
         }
 
-        // 🧍 Naamzichtbaarheid initialiseren voor al online spelers (bij herstart/reload)
-        for (Player speler : Bukkit.getOnlinePlayers()) {
-            if (nameVisibilityManager.isHidingNametags(speler)) {
-                nameVisibilityManager.hideOthersNametagsFor(speler);
-            } else {
-                nameVisibilityManager.resetScoreboard(speler);
-            }
+        // Naamzichtbaarheid herstellen
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (nameVisibilityManager.isHidingNametags(p)) nameVisibilityManager.hideOthersNametagsFor(p);
+            else nameVisibilityManager.resetScoreboard(p);
         }
 
         getLogger().info("✅ RooziesPlugin succesvol ingeschakeld.");
     }
 
-    @Override
-    public void onDisable() {
-        getLogger().info("⛔ RooziesPlugin is uitgeschakeld.");
-    }
+    @Override public void onDisable() { getLogger().info("⛔ RooziesPlugin is uitgeschakeld."); }
 
-    // Fallback router voor commands die geen specifieke executor kregen
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (emoteManager != null && emoteManager.handleCommand(sender, command, label, args)) return true;
-        if (roleManager != null && roleManager.handleCommand(sender, command, label, args)) return true;
+        if (roleManager  != null && roleManager.handleCommand(sender, command, label, args)) return true;
+        if (teamManager  != null && teamManager.handleCommand(sender, command, label, args)) return true;
         return false;
     }
 
-    /* =======================
-       Getters & reloaders
-       ======================= */
-
-    public File getEmotesFile() {
-        return new File(getDataFolder(), "emotes.yml");
-    }
-
-    public File getRolesFile() {
-        return rolesFile;
-    }
-
-    public File getMenuConfigFile() {
-        return menuConfigFile;
-    }
-
-    public FileConfiguration getMenuConfig() {
-        return menuConfig;
-    }
-
-    public void reloadMenuConfig() {
-        this.menuConfig = YamlConfiguration.loadConfiguration(menuConfigFile);
-    }
+    // ==== Getters ====
+    public File getEmotesFile() { return new File(getDataFolder(), "emotes.yml"); }
+    public File getRolesFile() { return rolesFile; }
+    public File getMenuConfigFile() { return menuConfigFile; }
+    public FileConfiguration getMenuConfig() { return menuConfig; }
+    public void reloadMenuConfig() { this.menuConfig = YamlConfiguration.loadConfiguration(menuConfigFile); }
+    public File getTeamsFile() { return teamsFile; }
+    public TeamManager getTeamManager() { return teamManager; }
 }

@@ -6,17 +6,30 @@ author: Djskinproductions, FutureVoyager
 api-version: 1.21
 
 commands:
+  roozie:
+    description: Basiscommand voor RooziePlugin
+    usage: /roozie.reload
+    permission: roozie.admin
+
+  rolemenu:
+    description: Open het menu
+    usage: /rolemenu
+
   help:
     description: Toon help informatie
     usage: /help
-    
-  herkies:
-    description: herkies jou rol
-    usage: /herkies
 
   resetrol:
     description: Reset jouw rol en kies opnieuw
     usage: /resetrol
+
+  roleupgrade:
+    description: Upgrade je rol als Team-owner
+    usage: /upgraderole
+
+  team:
+    description: team beheer (create/invite/accept/leave/disband/info)
+    usage: /team <subcommand>
 
   togglename:
     description: Zet naamzichtbaarheid aan of uit
@@ -84,22 +97,7 @@ commands:
     description: Doe de emote 'fall'
 
 permissions:
-  roozie.help:
-    description: Toegang tot /help
-    default: true
-
-  roozie.rol.ultima:
-    description: Mag de Ultima Weerwolf rol kiezen
+  roozie.admin:
     default: op
-
   roozie.rol.herkiezen:
-    description: Mag opnieuw een rol kiezen
     default: op
-
-  roozie.rol.reset:
-    description: Mag zijn/haar rol resetten
-    default: op
-
-  roozie.name.toggle:
-    description: Toggle naamzichtbaarheid aan/uit
-    default: true
