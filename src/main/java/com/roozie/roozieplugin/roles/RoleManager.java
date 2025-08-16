@@ -42,7 +42,7 @@ public class RoleManager implements Listener {
     private final Map<UUID, String> spelerRollen = new HashMap<>();
 
     private static final String MENU_TITLE = ChatColor.YELLOW + "Kies je rol";
-    private static final String STAFF_PREFIX = "s_"; // rollen met dit prefix kun je niet resetten
+    private static final String STAFF_PREFIX = "group.s_"; // rollen met dit prefix kun je niet resetten
 
     public RoleManager(RooziesPlugin plugin) {
         this.plugin = plugin;
