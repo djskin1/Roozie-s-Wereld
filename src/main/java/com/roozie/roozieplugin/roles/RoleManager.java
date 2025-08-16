@@ -42,6 +42,7 @@ public class RoleManager implements Listener {
     private File rolesFile;
     private FileConfiguration rolesConfig;
     private final Map<UUID, String> spelerRollen = new HashMap<>();
+    private  static final  String STAFF_PREFIX = "s_";
 
     private static final String MENU_TITLE = ChatColor.YELLOW + "Kies je rol";
 
@@ -49,6 +50,11 @@ public class RoleManager implements Listener {
         this.plugin = plugin;
         createRolesConfig();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    }
+
+    private boolean isProtectedRoleName(String roleName) {
+        return roleName != null
+                && roleName.toLowerCase(Locale.ROOT).startsWith(STAFF_PREFIX);
     }
 
     /* =======================
@@ -210,6 +216,12 @@ public class RoleManager implements Listener {
             speler.sendMessage(color("&eJe hebt nog geen rol gekozen."));
             return;
         }
+
+        String currentRole = rolesConfig.getString(storageKey, null);
+            if (isProtectedRoleName(currentRole)){
+                speler.sendMessage(color("&cDeze rol kan niet worden gereset"));
+                return;
+            }
 
         // LuckPerms cleanup: op de juiste UUID (Java als gelinkt)
         removeAllLuckPermsGroups(resolveLuckPermsTargetUuid(speler));
