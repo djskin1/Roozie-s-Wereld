@@ -28,7 +28,6 @@ import net.luckperms.api.node.Node;
 import net.luckperms.api.node.types.InheritanceNode;
 
 import org.geysermc.floodgate.api.FloodgateApi;
-// optioneel, maar handig als je de class wilt gebruiken:
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 
 import java.io.File;
@@ -42,19 +41,16 @@ public class RoleManager implements Listener {
     private File rolesFile;
     private FileConfiguration rolesConfig;
     private final Map<UUID, String> spelerRollen = new HashMap<>();
-    private  static final  String STAFF_PREFIX = "s_";
 
     private static final String MENU_TITLE = ChatColor.YELLOW + "Kies je rol";
+
+    // Rollen met dit prefix mogen NIET gereset worden
+    private static final String STAFF_PREFIX = "s_";
 
     public RoleManager(RooziesPlugin plugin) {
         this.plugin = plugin;
         createRolesConfig();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-    }
-
-    private boolean isProtectedRoleName(String roleName) {
-        return roleName != null
-                && roleName.toLowerCase(Locale.ROOT).startsWith(STAFF_PREFIX);
     }
 
     /* =======================
@@ -92,7 +88,7 @@ public class RoleManager implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player speler = event.getPlayer();
 
-        // (Optioneel) Bedrock welcome
+        // (Optioneel) Bedrock welkom
         try {
             if (isFloodgateEnabled() && FloodgateApi.getInstance().isFloodgatePlayer(speler.getUniqueId())) {
                 speler.sendMessage(color("&eWelkom Bedrock speler!"));
@@ -100,7 +96,6 @@ public class RoleManager implements Listener {
         } catch (Throwable ignored) {}
 
         String storageKey = getStorageKey(speler);
-        // Migreer oude sleutels naar de nieuwe (bijv. van UUID -> xuid of Java UUID)
         String rol = getExistingRoleAndMigrate(speler, storageKey);
 
         boolean herkiezen = speler.hasPermission("roozie.rol.herkiezen");
@@ -217,13 +212,14 @@ public class RoleManager implements Listener {
             return;
         }
 
+        // ⛔ blokkeer resetten voor staff-rollen met prefix s_
         String currentRole = rolesConfig.getString(storageKey, null);
-            if (isProtectedRoleName(currentRole)){
-                speler.sendMessage(color("&cDeze rol kan niet worden gereset"));
-                return;
-            }
+        if (isProtectedRoleName(currentRole)) {
+            speler.sendMessage(color("&cDeze rol kan niet gereset worden."));
+            return;
+        }
 
-        // LuckPerms cleanup: op de juiste UUID (Java als gelinkt)
+        // LuckPerms cleanup op juiste UUID (Java als gelinkt)
         removeAllLuckPermsGroups(resolveLuckPermsTargetUuid(speler));
 
         rolesConfig.set(storageKey, null);
@@ -233,66 +229,10 @@ public class RoleManager implements Listener {
         openRoleMenu(speler);
     }
 
-    /**
-     * Reset ALLE rollen behalve protected, met Bedrock-compat (keys kunnen xuid:... zijn).
-     * Vereist permissie: roozie.reset.all
-     */
-    public void resetAllRoles(CommandSender sender) {
-        if (!sender.hasPermission("roozie.reset.all")) {
-            sender.sendMessage(color("&cJe hebt geen permissie om alle rollen te resetten."));
-            return;
-        }
-
-        FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
-        ConfigurationSection rollenSectie = menuConfig.getConfigurationSection("rollen");
-
-        int total = 0, skipped = 0, reset = 0;
-
-        for (String key : new HashSet<>(rolesConfig.getKeys(false))) {
-            total++;
-            String roleName = rolesConfig.getString(key);
-            boolean isProtected = false;
-
-            if (rollenSectie != null && roleName != null) {
-                ConfigurationSection rs = rollenSectie.getConfigurationSection(roleName);
-                if (rs != null) isProtected = rs.getBoolean("protected", false);
-            }
-
-            if (isProtected) { skipped++; continue; }
-
-            // Probeer LP voor keys die echte UUID's zijn
-            try {
-                UUID maybeUuid = UUID.fromString(key);
-                removeAllLuckPermsGroups(maybeUuid);
-            } catch (IllegalArgumentException ignored) {
-                // xuid:... of floodgate:... keys -> geen directe UUID beschikbaar
-            }
-
-            rolesConfig.set(key, null);
-            reset++;
-
-            // Informeer online spelers waarvan de key overeenkomt
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                String pKey = getStorageKey(p);
-                if (pKey.equals(key)) {
-                    p.sendMessage(color("&eJe rol is door een admin gereset. Kies opnieuw aub."));
-                    openRoleMenu(p);
-                }
-            }
-        }
-
-        saveRolesConfig();
-        sender.sendMessage(color("&aReset voltooid. &fGereset: &e" + reset + " &7| &fOvergeslagen (protected): &e" + skipped + " &7| &fTotaal entries: &e" + total));
-    }
-
     public boolean handleCommand(CommandSender sender, org.bukkit.command.Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("resetrol")) {
-            if (args.length > 0 && (args[0].equalsIgnoreCase("all") || args[0].equalsIgnoreCase("alle") || args[0].equalsIgnoreCase("*"))) {
-                resetAllRoles(sender);
-                return true;
-            }
             if (!(sender instanceof Player)) {
-                sender.sendMessage(color("&cAlleen spelers kunnen hun eigen rol resetten. Gebruik &e/resetrol all &cvoor een globale reset."));
+                sender.sendMessage(color("&cAlleen spelers kunnen hun eigen rol resetten."));
                 return true;
             }
             resetRol((Player) sender);
@@ -315,6 +255,10 @@ public class RoleManager implements Listener {
        Helpers
        ======================= */
 
+    private boolean isProtectedRoleName(String roleName) {
+        return roleName != null && roleName.toLowerCase(Locale.ROOT).startsWith(STAFF_PREFIX);
+    }
+
     /** Bepaalt een stabiele opslag-sleutel voor deze speler (Java UUID, of Bedrock gelinkte Java UUID, of xuid:..., of fallback UUID). */
     private String getStorageKey(Player speler) {
         UUID uuid = speler.getUniqueId();
@@ -323,7 +267,7 @@ public class RoleManager implements Listener {
             try {
                 FloodgatePlayer fp = FloodgateApi.getInstance().getPlayer(uuid);
                 if (fp != null) {
-                    // Als gelinkt: gebruik Java UUID (gedeelde rol tussen Java & Bedrock)
+                    // gelinkt → Java UUID
                     try {
                         if (fp.isLinked() && fp.getLinkedPlayer() != null) {
                             UUID javaId = fp.getLinkedPlayer().getJavaUniqueId();
@@ -331,30 +275,24 @@ public class RoleManager implements Listener {
                         }
                     } catch (Throwable ignored) {}
 
-                    // Anders: gebruik XUID als stabiele sleutel
+                    // anders → XUID
                     String xuid = fp.getXuid();
                     if (xuid != null && !xuid.isEmpty()) return "xuid:" + xuid;
                 }
             } catch (Throwable ignored) {}
-            // Fallback: Floodgate/Bedrock UUID (kan per setup verschillen, maar beter dan niets)
             return uuid.toString();
         }
 
-        // Java speler
         return uuid.toString();
     }
 
     /** Zoekt bestaande rol op oude sleutels en migreert naar de target key. */
     private String getExistingRoleAndMigrate(Player speler, String targetKey) {
-        if (rolesConfig.contains(targetKey)) {
-            return rolesConfig.getString(targetKey);
-        }
+        if (rolesConfig.contains(targetKey)) return rolesConfig.getString(targetKey);
 
         List<String> candidateKeys = new ArrayList<>();
-        // oude UUID key
         candidateKeys.add(speler.getUniqueId().toString());
 
-        // mogelijke Bedrock varianten
         if (isFloodgateEnabled()) {
             try {
                 if (FloodgateApi.getInstance().isFloodgatePlayer(speler.getUniqueId())) {
@@ -362,7 +300,7 @@ public class RoleManager implements Listener {
                     if (fp != null) {
                         String xuid = fp.getXuid();
                         if (xuid != null && !xuid.isEmpty()) candidateKeys.add("xuid:" + xuid);
-                        candidateKeys.add("floodgate:" + speler.getUniqueId()); // mocht je ooit deze prefix gebruikt hebben
+                        candidateKeys.add("floodgate:" + speler.getUniqueId());
                     }
                 }
             } catch (Throwable ignored) {}
@@ -371,7 +309,6 @@ public class RoleManager implements Listener {
         for (String key : candidateKeys) {
             if (rolesConfig.contains(key)) {
                 String rol = rolesConfig.getString(key);
-                // migreer
                 rolesConfig.set(targetKey, rol);
                 if (!key.equals(targetKey)) rolesConfig.set(key, null);
                 saveRolesConfig();
@@ -395,7 +332,7 @@ public class RoleManager implements Listener {
                 meta.setLore(colored);
             }
 
-            // ---- Enchant / glow uit config ----
+            // Enchant / glow uit config
             boolean glow = rolSectie.getBoolean("glow", false);
             boolean hide = rolSectie.getBoolean("hide_enchants", true);
 
