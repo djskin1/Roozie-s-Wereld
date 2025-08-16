@@ -4,6 +4,7 @@ import com.roozie.roozieplugin.RooziesPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -16,6 +17,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -36,7 +39,6 @@ public class RoleManager implements Listener {
     private FileConfiguration rolesConfig;
     private final Map<UUID, String> spelerRollen = new HashMap<>();
 
-    // Titel van het GUI-menu
     private static final String MENU_TITLE = ChatColor.YELLOW + "Kies je rol";
 
     public RoleManager(RooziesPlugin plugin) {
@@ -46,7 +48,7 @@ public class RoleManager implements Listener {
     }
 
     /* =======================
-       Config roles.yml laden
+       roles.yml
        ======================= */
 
     private void createRolesConfig() {
@@ -96,7 +98,6 @@ public class RoleManager implements Listener {
 
         boolean herkiezen = speler.hasPermission("roozie.rol.herkiezen");
         if (!rolesConfig.contains(uuid.toString()) || herkiezen) {
-            // Even delay zodat inventory openen niet botst met join
             Bukkit.getScheduler().runTaskLater(plugin, () -> openRoleMenu(speler), 20L);
             return;
         }
@@ -111,7 +112,6 @@ public class RoleManager implements Listener {
         HumanEntity who = event.getWhoClicked();
         if (!(who instanceof Player)) return;
 
-        // Check menu titel (legacy string; werkt op veel serverversies)
         if (!event.getView().getTitle().equals(MENU_TITLE)) return;
 
         event.setCancelled(true);
@@ -123,7 +123,7 @@ public class RoleManager implements Listener {
         ItemMeta meta = clickedItem.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        String gekozenRol = ChatColor.stripColor(meta.getDisplayName()); // weghalen kleur voor lookup
+        String gekozenRol = ChatColor.stripColor(meta.getDisplayName());
 
         FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
         ConfigurationSection rolSectie = menuConfig.getConfigurationSection("rollen." + gekozenRol);
@@ -132,24 +132,20 @@ public class RoleManager implements Listener {
             return;
         }
 
-        // permissie die nodig is om deze rol te kiezen
         String vereistePermissie = rolSectie.getString("permissie", "");
         if (vereistePermissie != null && !vereistePermissie.isEmpty() && !speler.hasPermission(vereistePermissie)) {
             speler.sendMessage(color("&cJe hebt geen permissie voor deze rol."));
             return;
         }
 
-        // LuckPerms group-naam (optioneel in menu.yml); fallback = rolnaam
         String lpGroup = rolSectie.getString("lp_group", gekozenRol);
 
-        // Sla rol op en pas LuckPerms toe
         UUID uuid = speler.getUniqueId();
         rolesConfig.set(uuid.toString(), gekozenRol);
         saveRolesConfig();
         spelerRollen.put(uuid, gekozenRol);
 
-        // LuckPerms toewijzing (indien aanwezig)
-        applyLuckPermsGroup(speler.getUniqueId(), lpGroup);
+        applyLuckPermsGroup(uuid, lpGroup);
 
         speler.sendMessage(color("&aJe hebt gekozen voor de rol: &e" + gekozenRol));
         speler.closeInventory();
@@ -168,7 +164,6 @@ public class RoleManager implements Listener {
             return;
         }
 
-        // Filter op permissie en maak items
         List<ItemStack> items = new ArrayList<>();
         for (String rolNaam : rollenSectie.getKeys(false)) {
             ConfigurationSection rolSectie = rollenSectie.getConfigurationSection(rolNaam);
@@ -176,19 +171,18 @@ public class RoleManager implements Listener {
 
             String vereistePermissie = rolSectie.getString("permissie", "");
             if (vereistePermissie != null && !vereistePermissie.isEmpty() && !speler.hasPermission(vereistePermissie)) {
-                continue; // speler mag deze rol niet kiezen -> toon niet
+                continue;
             }
 
             String materiaalStr = rolSectie.getString("materiaal", "STONE");
             Material materiaal = Material.matchMaterial(materiaalStr != null ? materiaalStr : "STONE");
             if (materiaal == null) materiaal = Material.STONE;
 
-            // lore kan 1 string of een lijst zijn
             List<String> loreRaw = rolSectie.isList("lore")
                     ? rolSectie.getStringList("lore")
                     : (rolSectie.contains("lore") ? Collections.singletonList(rolSectie.getString("lore", "")) : Collections.emptyList());
 
-            ItemStack item = createMenuItem(materiaal, rolNaam, loreRaw);
+            ItemStack item = createMenuItem(materiaal, rolNaam, loreRaw, rolSectie);
             items.add(item);
         }
 
@@ -200,7 +194,6 @@ public class RoleManager implements Listener {
         int size = calcInventorySize(items.size());
         Inventory menu = Bukkit.createInventory(null, size, MENU_TITLE);
 
-        // Zet items links naar rechts, boven naar beneden
         for (int i = 0; i < items.size() && i < size; i++) {
             menu.setItem(i, items.get(i));
         }
@@ -216,11 +209,7 @@ public class RoleManager implements Listener {
             return;
         }
 
-        // LuckPerms: verwijder huidige group als die overeenkomt met de rol
-        String huidigeRol = rolesConfig.getString(uuid.toString());
-        if (huidigeRol != null && !huidigeRol.isEmpty()) {
-            removeLuckPermsGroup(uuid, huidigeRol);
-        }
+        removeAllLuckPermsGroups(uuid);
 
         rolesConfig.set(uuid.toString(), null);
         saveRolesConfig();
@@ -250,11 +239,12 @@ public class RoleManager implements Listener {
        Helpers
        ======================= */
 
-    private ItemStack createMenuItem(Material materiaal, String naam, List<String> loreRaw) {
+    private ItemStack createMenuItem(Material materiaal, String naam, List<String> loreRaw, ConfigurationSection rolSectie) {
         ItemStack item = new ItemStack(materiaal);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(color("&e" + naam));
+
             if (loreRaw != null && !loreRaw.isEmpty()) {
                 List<String> colored = loreRaw.stream()
                         .filter(Objects::nonNull)
@@ -262,13 +252,50 @@ public class RoleManager implements Listener {
                         .collect(Collectors.toList());
                 meta.setLore(colored);
             }
+
+            // ---- Enchant / glow uit config ----
+            boolean glow = rolSectie.getBoolean("glow", false);
+            boolean hide = rolSectie.getBoolean("hide_enchants", true);
+
+            Map<Enchantment, Integer> enchants = new HashMap<>();
+            if (rolSectie.isConfigurationSection("enchants")) {
+                ConfigurationSection cs = rolSectie.getConfigurationSection("enchants");
+                for (String key : cs.getKeys(false)) {
+                    Enchantment e = matchEnchantment(key);
+                    int lvl = cs.getInt(key, 1);
+                    if (e != null) enchants.put(e, Math.max(1, lvl));
+                }
+            } else if (rolSectie.isList("enchants")) {
+                for (String line : rolSectie.getStringList("enchants")) {
+                    if (line == null || line.isEmpty()) continue;
+                    String[] parts = line.split(":", 2);
+                    String id = parts[0].trim();
+                    int lvl = (parts.length > 1) ? parseIntSafe(parts[1].trim(), 1) : 1;
+                    Enchantment e = matchEnchantment(id);
+                    if (e != null) enchants.put(e, Math.max(1, lvl));
+                }
+            }
+
+            // Voeg echte enchants toe
+            for (Map.Entry<Enchantment, Integer> en : enchants.entrySet()) {
+                meta.addEnchant(en.getKey(), en.getValue(), true);
+            }
+
+            // Alleen glow zonder echte enchants -> dummy enchant
+            if (glow && enchants.isEmpty()) {
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            }
+
+            if (hide) {
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }
+
             item.setItemMeta(meta);
         }
         return item;
     }
 
     private int calcInventorySize(int itemCount) {
-        // rond omhoog naar dichtstbijzijnde veelvoud van 9, max 54
         int size = ((Math.max(1, itemCount) - 1) / 9 + 1) * 9;
         return Math.min(size, 54);
     }
@@ -282,7 +309,8 @@ public class RoleManager implements Listener {
     }
 
     private boolean isFloodgateEnabled() {
-        return Bukkit.getPluginManager().isPluginEnabled("floodgate") || Bukkit.getPluginManager().isPluginEnabled("Floodgate");
+        return Bukkit.getPluginManager().isPluginEnabled("floodgate")
+                || Bukkit.getPluginManager().isPluginEnabled("Floodgate");
     }
 
     private void applyLuckPermsGroup(UUID uuid, String groupName) {
@@ -291,8 +319,7 @@ public class RoleManager implements Listener {
             LuckPerms lp = LuckPermsProvider.get();
 
             lp.getUserManager().modifyUser(uuid, (User user) -> {
-                // Verwijder alle bestaande "group.*" nodes die door dit systeem gezet zouden kunnen zijn
-                // (optioneel: je kunt dit beperken tot bekende rolnamen)
+                // Verwijder alle bestaande group.* nodes (optioneel)
                 List<Node> toRemove = user.data().toCollection().stream()
                         .filter(n -> n.getKey().startsWith("group."))
                         .collect(Collectors.toList());
@@ -306,20 +333,32 @@ public class RoleManager implements Listener {
         }
     }
 
-    private void removeLuckPermsGroup(UUID uuid, String groupName) {
+    private void removeAllLuckPermsGroups(UUID uuid) {
         try {
             if (!isLuckPermsEnabled()) return;
             LuckPerms lp = LuckPermsProvider.get();
 
             lp.getUserManager().modifyUser(uuid, (User user) -> {
-                // Verwijder de specifieke group node
                 List<Node> toRemove = user.data().toCollection().stream()
-                        .filter(n -> n.getKey().equalsIgnoreCase("group." + groupName.toLowerCase()))
+                        .filter(n -> n.getKey().startsWith("group."))
                         .collect(Collectors.toList());
                 toRemove.forEach(n -> user.data().remove(n));
             });
         } catch (Throwable t) {
-            plugin.getLogger().warning("Kon LuckPerms group niet verwijderen voor " + uuid + ": " + t.getMessage());
+            plugin.getLogger().warning("Kon LuckPerms groups niet verwijderen voor " + uuid + ": " + t.getMessage());
         }
+    }
+
+    private int parseIntSafe(String s, int def) {
+        try { return Integer.parseInt(s); } catch (Exception e) { return def; }
+    }
+
+    private Enchantment matchEnchantment(String id) {
+        if (id == null) return null;
+        try {
+            Enchantment byKey = Enchantment.getByKey(NamespacedKey.minecraft(id.toLowerCase()));
+            if (byKey != null) return byKey;
+        } catch (Throwable ignored) {}
+        return Enchantment.getByName(id.toUpperCase());
     }
 }

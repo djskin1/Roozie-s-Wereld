@@ -19,8 +19,37 @@ rollen:
     lore: "Gewoon een simpele dorpsbewoner"
     permissie: ""
     lp_group: mens
+  Demoon:
+    materiaal: wither_skeleton_skull
+    lore: "Wordt een demoon en bedrieg en bedrijg de wereld"
+    permissie: ""
+    lp_group: demoon
   Ultima Weerwolf:
-    materiaal: NETHER_STAR
-    lore: "De ultieme dreiging"
+    materiaal: WOLF_SPAWN_EGG
+    lore: "De ultieme dreiging en wordt de baas over jou Roedel"
     permissie: rol.ultima
     lp_group: ultima
+    glow: true
+    hide_enchants: true
+  Licht Engel:
+    materiaal: FEATHER
+    lore: "Word de sterkste Engel die er is met veel licht en wordt de baas van je Leger"
+    permissie: rol.licht
+    lp_group: licht
+    glow: true
+    hide_enchants: true
+  Meester Heks:
+    materiaal: POTION
+    lore: "Word een nog sterkere heks en wordt de baas van jou Coven"
+    permissie: rol.mheks
+    lp_group: mheks
+    glow: true
+    hide_enchants: true
+  Duivel:
+    materiaal: wither_skeleton_skull
+    lore: "Wordt een de baas van de horde demonen"
+    permissie: duivel
+    lp_group: duivel
+    glow: true
+    hide_enchants: true
+
