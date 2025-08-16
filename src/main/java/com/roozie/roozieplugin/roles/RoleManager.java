@@ -24,7 +24,6 @@ import org.bukkit.inventory.ItemFlag;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
-import net.luckperms.api.node.Node;
 import net.luckperms.api.node.types.InheritanceNode;
 
 import org.geysermc.floodgate.api.FloodgateApi;
@@ -43,9 +42,7 @@ public class RoleManager implements Listener {
     private final Map<UUID, String> spelerRollen = new HashMap<>();
 
     private static final String MENU_TITLE = ChatColor.YELLOW + "Kies je rol";
-
-    // Rollen met dit prefix mogen NIET gereset worden
-    private static final String STAFF_PREFIX = "s_";
+    private static final String STAFF_PREFIX = "s_"; // rollen met dit prefix kun je niet resetten
 
     public RoleManager(RooziesPlugin plugin) {
         this.plugin = plugin;
@@ -53,10 +50,7 @@ public class RoleManager implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    /* =======================
-       roles.yml
-       ======================= */
-
+    /* roles.yml */
     private void createRolesConfig() {
         rolesFile = plugin.getRolesFile();
         if (!rolesFile.exists()) {
@@ -72,27 +66,17 @@ public class RoleManager implements Listener {
     }
 
     private void saveRolesConfig() {
-        try {
-            rolesConfig.save(rolesFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Fout bij opslaan van roles.yml");
-            e.printStackTrace();
-        }
+        try { rolesConfig.save(rolesFile); }
+        catch (IOException e) { plugin.getLogger().severe("Fout bij opslaan van roles.yml"); e.printStackTrace(); }
     }
 
-    /* =======================
-       Events
-       ======================= */
-
+    /* Events */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player speler = event.getPlayer();
-
-        // (Optioneel) Bedrock welkom
         try {
-            if (isFloodgateEnabled() && FloodgateApi.getInstance().isFloodgatePlayer(speler.getUniqueId())) {
+            if (isFloodgateEnabled() && FloodgateApi.getInstance().isFloodgatePlayer(speler.getUniqueId()))
                 speler.sendMessage(color("&eWelkom Bedrock speler!"));
-            }
         } catch (Throwable ignored) {}
 
         String storageKey = getStorageKey(speler);
@@ -112,10 +96,9 @@ public class RoleManager implements Listener {
     public void onMenuClick(InventoryClickEvent event) {
         HumanEntity who = event.getWhoClicked();
         if (!(who instanceof Player)) return;
-
         if (!event.getView().getTitle().equals(MENU_TITLE)) return;
-        event.setCancelled(true);
 
+        event.setCancelled(true);
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR || !clickedItem.hasItemMeta()) return;
 
@@ -127,10 +110,7 @@ public class RoleManager implements Listener {
 
         FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
         ConfigurationSection rolSectie = menuConfig.getConfigurationSection("rollen." + gekozenRol);
-        if (rolSectie == null) {
-            speler.sendMessage(color("&cDeze rol bestaat niet (meer)."));
-            return;
-        }
+        if (rolSectie == null) { speler.sendMessage(color("&cDeze rol bestaat niet (meer).")); return; }
 
         String vereistePermissie = rolSectie.getString("permissie", "");
         if (vereistePermissie != null && !vereistePermissie.isEmpty() && !speler.hasPermission(vereistePermissie)) {
@@ -140,24 +120,21 @@ public class RoleManager implements Listener {
 
         String lpGroup = rolSectie.getString("lp_group", gekozenRol);
 
-        // --- OPSLAAN OP STABIELE SLEUTEL ---
+        // opslaan
         String storageKey = getStorageKey(speler);
         rolesConfig.set(storageKey, gekozenRol);
         saveRolesConfig();
 
         spelerRollen.put(speler.getUniqueId(), gekozenRol);
 
-        // LuckPerms target: Java UUID als gelinkt, anders eigen UUID
+        // LuckPerms (Java UUID als gelinkt)
         applyLuckPermsGroup(resolveLuckPermsTargetUuid(speler), lpGroup);
 
         speler.sendMessage(color("&aJe hebt gekozen voor de rol: &e" + gekozenRol));
         speler.closeInventory();
     }
 
-    /* =======================
-       Publieke API
-       ======================= */
-
+    /* Publieke API */
     public void openRoleMenu(Player speler) {
         FileConfiguration menuConfig = YamlConfiguration.loadConfiguration(plugin.getMenuConfigFile());
         ConfigurationSection rollenSectie = menuConfig.getConfigurationSection("rollen");
@@ -189,18 +166,11 @@ public class RoleManager implements Listener {
             items.add(item);
         }
 
-        if (items.isEmpty()) {
-            speler.sendMessage(color("&cEr zijn geen rollen die jij kunt kiezen."));
-            return;
-        }
+        if (items.isEmpty()) { speler.sendMessage(color("&cEr zijn geen rollen die jij kunt kiezen.")); return; }
 
         int size = calcInventorySize(items.size());
         Inventory menu = Bukkit.createInventory(null, size, MENU_TITLE);
-
-        for (int i = 0; i < items.size() && i < size; i++) {
-            menu.setItem(i, items.get(i));
-        }
-
+        for (int i = 0; i < items.size() && i < size; i++) menu.setItem(i, items.get(i));
         speler.openInventory(menu);
     }
 
@@ -212,87 +182,65 @@ public class RoleManager implements Listener {
             return;
         }
 
-        // ⛔ blokkeer resetten voor staff-rollen met prefix s_
         String currentRole = rolesConfig.getString(storageKey, null);
         if (isProtectedRoleName(currentRole)) {
             speler.sendMessage(color("&cDeze rol kan niet gereset worden."));
             return;
         }
 
-        // LuckPerms cleanup op juiste UUID (Java als gelinkt)
-        removeAllLuckPermsGroups(resolveLuckPermsTargetUuid(speler));
-
+        // terug naar default group (LP) + opslag legen
+        setLuckPermsToDefault(resolveLuckPermsTargetUuid(speler));
         rolesConfig.set(storageKey, null);
         saveRolesConfig();
 
-        speler.sendMessage(color("&aJe rol is gereset. Kies opnieuw..."));
+        speler.sendMessage(color("&aJe bent teruggezet naar de standaardgroep. Kies opnieuw..."));
         openRoleMenu(speler);
     }
 
     public boolean handleCommand(CommandSender sender, org.bukkit.command.Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("resetrol")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage(color("&cAlleen spelers kunnen hun eigen rol resetten."));
-                return true;
-            }
+            if (!(sender instanceof Player)) { sender.sendMessage(color("&cAlleen spelers kunnen hun eigen rol resetten.")); return true; }
             resetRol((Player) sender);
             return true;
         }
-
         if (command.getName().equalsIgnoreCase("rolmenu")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage(color("&cAlleen spelers kunnen dit menu openen."));
-                return true;
-            }
+            if (!(sender instanceof Player)) { sender.sendMessage(color("&cAlleen spelers kunnen dit menu openen.")); return true; }
             openRoleMenu((Player) sender);
             return true;
         }
-
         return false;
     }
 
-    /* =======================
-       Helpers
-       ======================= */
-
+    /* Helpers */
     private boolean isProtectedRoleName(String roleName) {
         return roleName != null && roleName.toLowerCase(Locale.ROOT).startsWith(STAFF_PREFIX);
     }
 
-    /** Bepaalt een stabiele opslag-sleutel voor deze speler (Java UUID, of Bedrock gelinkte Java UUID, of xuid:..., of fallback UUID). */
     private String getStorageKey(Player speler) {
         UUID uuid = speler.getUniqueId();
-
         if (isFloodgateEnabled() && FloodgateApi.getInstance().isFloodgatePlayer(uuid)) {
             try {
                 FloodgatePlayer fp = FloodgateApi.getInstance().getPlayer(uuid);
                 if (fp != null) {
-                    // gelinkt → Java UUID
                     try {
                         if (fp.isLinked() && fp.getLinkedPlayer() != null) {
                             UUID javaId = fp.getLinkedPlayer().getJavaUniqueId();
                             if (javaId != null) return javaId.toString();
                         }
                     } catch (Throwable ignored) {}
-
-                    // anders → XUID
                     String xuid = fp.getXuid();
                     if (xuid != null && !xuid.isEmpty()) return "xuid:" + xuid;
                 }
             } catch (Throwable ignored) {}
             return uuid.toString();
         }
-
         return uuid.toString();
     }
 
-    /** Zoekt bestaande rol op oude sleutels en migreert naar de target key. */
     private String getExistingRoleAndMigrate(Player speler, String targetKey) {
         if (rolesConfig.contains(targetKey)) return rolesConfig.getString(targetKey);
-
         List<String> candidateKeys = new ArrayList<>();
         candidateKeys.add(speler.getUniqueId().toString());
-
         if (isFloodgateEnabled()) {
             try {
                 if (FloodgateApi.getInstance().isFloodgatePlayer(speler.getUniqueId())) {
@@ -305,7 +253,6 @@ public class RoleManager implements Listener {
                 }
             } catch (Throwable ignored) {}
         }
-
         for (String key : candidateKeys) {
             if (rolesConfig.contains(key)) {
                 String rol = rolesConfig.getString(key);
@@ -323,16 +270,10 @@ public class RoleManager implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(color("&e" + naam));
-
             if (loreRaw != null && !loreRaw.isEmpty()) {
-                List<String> colored = loreRaw.stream()
-                        .filter(Objects::nonNull)
-                        .map(this::color)
-                        .collect(Collectors.toList());
+                List<String> colored = loreRaw.stream().filter(Objects::nonNull).map(this::color).collect(Collectors.toList());
                 meta.setLore(colored);
             }
-
-            // Enchant / glow uit config
             boolean glow = rolSectie.getBoolean("glow", false);
             boolean hide = rolSectie.getBoolean("hide_enchants", true);
 
@@ -354,17 +295,9 @@ public class RoleManager implements Listener {
                     if (e != null) enchants.put(e, Math.max(1, lvl));
                 }
             }
-
-            for (Map.Entry<Enchantment, Integer> en : enchants.entrySet()) {
-                meta.addEnchant(en.getKey(), en.getValue(), true);
-            }
-
-            if (glow && enchants.isEmpty()) {
-                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            }
-
+            for (Map.Entry<Enchantment, Integer> en : enchants.entrySet()) meta.addEnchant(en.getKey(), en.getValue(), true);
+            if (glow && enchants.isEmpty()) meta.addEnchant(Enchantment.UNBREAKING, 1, true);
             if (hide) meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-
             item.setItemMeta(meta);
         }
         return item;
@@ -375,16 +308,13 @@ public class RoleManager implements Listener {
         return Math.min(size, 54);
     }
 
-    private String color(String input) {
-        return ChatColor.translateAlternateColorCodes('&', input == null ? "" : input);
-    }
+    private String color(String input) { return ChatColor.translateAlternateColorCodes('&', input == null ? "" : input); }
 
     private boolean isFloodgateEnabled() {
         return Bukkit.getPluginManager().isPluginEnabled("floodgate")
                 || Bukkit.getPluginManager().isPluginEnabled("Floodgate");
     }
 
-    /** Bepaalt de juiste UUID voor LuckPerms (Java-UUID indien Bedrock gelinkt). */
     private UUID resolveLuckPermsTargetUuid(Player speler) {
         UUID uuid = speler.getUniqueId();
         if (isFloodgateEnabled()) {
@@ -405,49 +335,54 @@ public class RoleManager implements Listener {
         return uuid;
     }
 
-    private boolean isLuckPermsEnabled() {
-        return Bukkit.getPluginManager().isPluginEnabled("LuckPerms");
+    private boolean isLuckPermsEnabled() { return Bukkit.getPluginManager().isPluginEnabled("LuckPerms"); }
+
+    // === Reset naar default group (configurable) ===
+    private String getDefaultGroupName() {
+        try { return plugin.getConfig().getString("roles.default_group", "default"); }
+        catch (Throwable t) { return "default"; }
+    }
+
+    private void setLuckPermsToDefault(UUID targetUuid) {
+        try {
+            if (!isLuckPermsEnabled()) return;
+            final String defGroup = getDefaultGroupName();
+            LuckPerms lp = LuckPermsProvider.get();
+            lp.getUserManager().modifyUser(targetUuid, (User user) -> {
+                List<InheritanceNode> existing = user.data().toCollection().stream()
+                        .filter(n -> n instanceof InheritanceNode)
+                        .map(n -> (InheritanceNode) n)
+                        .collect(Collectors.toList());
+                for (InheritanceNode n : existing) {
+                    if (!n.getGroupName().equalsIgnoreCase(defGroup)) user.data().remove(n);
+                }
+                user.data().add(InheritanceNode.builder(defGroup).build());
+                try { user.setPrimaryGroup(defGroup); } catch (Throwable ignored) {}
+            });
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Kon speler niet naar default group zetten: " + t.getMessage());
+        }
     }
 
     private void applyLuckPermsGroup(UUID targetUuid, String groupName) {
         try {
             if (!isLuckPermsEnabled()) return;
             LuckPerms lp = LuckPermsProvider.get();
-
             lp.getUserManager().modifyUser(targetUuid, (User user) -> {
-                // Verwijder bestaande inheritances (pas aan als je meerdere groups wil toestaan)
-                List<Node> toRemove = user.data().toCollection().stream()
+                List<InheritanceNode> existing = user.data().toCollection().stream()
                         .filter(n -> n instanceof InheritanceNode)
+                        .map(n -> (InheritanceNode) n)
                         .collect(Collectors.toList());
-                toRemove.forEach(n -> user.data().remove(n));
-
+                for (InheritanceNode n : existing) user.data().remove(n);
                 user.data().add(InheritanceNode.builder(groupName.toLowerCase()).build());
                 try { user.setPrimaryGroup(groupName.toLowerCase()); } catch (Throwable ignored) {}
             });
         } catch (Throwable t) {
-            plugin.getLogger().warning("Kon LuckPerms group niet toepassen voor " + targetUuid + ": " + t.getMessage());
+            plugin.getLogger().warning("Kon LuckPerms group niet toepassen: " + t.getMessage());
         }
     }
 
-    private void removeAllLuckPermsGroups(UUID targetUuid) {
-        try {
-            if (!isLuckPermsEnabled()) return;
-            LuckPerms lp = LuckPermsProvider.get();
-
-            lp.getUserManager().modifyUser(targetUuid, (User user) -> {
-                List<Node> toRemove = user.data().toCollection().stream()
-                        .filter(n -> n instanceof InheritanceNode)
-                        .collect(Collectors.toList());
-                toRemove.forEach(n -> user.data().remove(n));
-            });
-        } catch (Throwable t) {
-            plugin.getLogger().warning("Kon LuckPerms groups niet verwijderen voor " + targetUuid + ": " + t.getMessage());
-        }
-    }
-
-    private int parseIntSafe(String s, int def) {
-        try { return Integer.parseInt(s); } catch (Exception e) { return def; }
-    }
+    private int parseIntSafe(String s, int def) { try { return Integer.parseInt(s); } catch (Exception e) { return def; } }
 
     private Enchantment matchEnchantment(String id) {
         if (id == null) return null;
